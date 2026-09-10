@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A bare platform theme: all real theming happens in Compose
+      (ui/theme/Theme.kt). No AppCompat or Material Components dependency is
+      needed because MainActivity is a ComponentActivity.
+    -->
+    <style name="Theme.KanjiPractice" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>

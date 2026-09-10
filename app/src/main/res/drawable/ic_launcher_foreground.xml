@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The first kanji anyone learns: 十 (ten). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31,50 L77,50 L77,58 L31,58 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M50,31 L58,31 L58,77 L50,77 Z" />
+</vector>
