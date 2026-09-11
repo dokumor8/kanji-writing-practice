@@ -66,7 +66,7 @@ fun DrawingCanvas(
                     down.consume()
 
                     val points = ArrayList<StrokePoint>()
-                    points += StrokePoint(down.position.x, down.position.y)
+                    points += StrokePoint(down.position.x, down.position.y, down.uptimeMillis)
                     livePoints = points.toList()
 
                     while (true) {
@@ -76,7 +76,11 @@ fun DrawingCanvas(
                             change.consume()
                             break
                         }
-                        points += StrokePoint(change.position.x, change.position.y)
+                        points += StrokePoint(
+                            change.position.x,
+                            change.position.y,
+                            change.uptimeMillis,
+                        )
                         livePoints = points.toList()
                         change.consume()
                     }

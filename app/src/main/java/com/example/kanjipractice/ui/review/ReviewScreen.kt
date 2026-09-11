@@ -2,6 +2,7 @@ package com.example.kanjipractice.ui.review
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,7 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,15 +42,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.deck.DeckJsonParser
-import com.example.kanjipractice.domain.stroke.StrokeDiagram
 import com.example.fsrs.Rating
 import com.example.kanjipractice.ui.components.DrawingCanvas
+import com.example.kanjipractice.ui.components.StrokeHintDialog
 import com.example.kanjipractice.ui.components.StrokeOrderView
 
 /**
- * The review screen (plan, sections 6 and 9.2). Every visual decision here is
- * there to protect one rule: nothing on the PROMPT screen may hint at the shape
- * of the character.
+ * The review screen.
+ *
+ * Every visual decision here protects one rule: nothing on the prompt may hint at
+ * the shape of the character. The hint exists, but it is a popup that has to be
+ * dismissed before drawing, so it cannot be traced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,16 +74,22 @@ fun ReviewScreen(
                         )
                     }
                 },
+                actions = {
+                    // Recover from a misclick on the rating screen.
+                    TextButton(
+                        onClick = viewModel::undoLastReview,
+                        enabled = state.canUndo,
+                    ) { Text("Undo review") }
+                },
             )
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val current = state) {
                 ReviewUiState.Loading -> CenteredMessage("Loading your reviews...")
-                ReviewUiState.SessionComplete -> SessionComplete(onExit)
+                is ReviewUiState.SessionComplete -> SessionComplete(current, onExit)
                 is ReviewUiState.Prompt -> PromptContent(current, viewModel)
                 is ReviewUiState.Success -> SuccessContent(current, viewModel)
-                is ReviewUiState.Relearn -> RelearnContent(current, viewModel)
             }
         }
     }
@@ -89,8 +98,7 @@ fun ReviewScreen(
 private fun titleFor(state: ReviewUiState): String = when (state) {
     is ReviewUiState.Prompt -> state.remaining.toString() + " to go"
     is ReviewUiState.Success -> "Correct"
-    is ReviewUiState.Relearn -> "Learn it, then trace it"
-    ReviewUiState.SessionComplete -> "Session complete"
+    is ReviewUiState.SessionComplete -> "Session complete"
     ReviewUiState.Loading -> "Review"
 }
 
@@ -103,11 +111,15 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
 
         Spacer(Modifier.height(12.dp))
 
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        // A square writing area: it is the shape a kanji is designed for, it
+        // keeps the geometry the recogniser sees consistent across devices, and
+        // it matches the square the stroke diagram is drawn in.
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val side = minOf(maxWidth, maxHeight)
             DrawingCanvas(
                 strokes = state.strokes,
                 onStrokeFinished = viewModel::onStrokeFinished,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.size(side).align(Alignment.Center),
                 enabled = !state.busy,
                 backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
             )
@@ -123,7 +135,7 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedButton(
-                onClick = viewModel::undo,
+                onClick = viewModel::undoStroke,
                 enabled = !state.busy && state.strokes.isNotEmpty(),
                 modifier = Modifier.weight(1f),
             ) { Text("Undo") }
@@ -139,10 +151,12 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TextButton(
-                onClick = viewModel::iDontKnow,
+                onClick = viewModel::showHint,
                 enabled = !state.busy,
                 modifier = Modifier.weight(1f),
-            ) { Text("I don't know") }
+            ) {
+                Text(if (state.hintCount == 0) "I don't know" else "Hint again")
+            }
             Button(
                 onClick = viewModel::submit,
                 enabled = !state.busy,
@@ -150,13 +164,20 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
             ) { Text("Submit") }
         }
     }
+
+    if (state.hintVisible) {
+        StrokeHintDialog(
+            card = state.card,
+            diagram = state.diagram,
+            onDismiss = viewModel::dismissHint,
+        )
+    }
 }
 
 /**
  * The prompt carries meaning and readings only. There is deliberately no button
- * here that reveals the shape of the character: the only way to see the diagram
- * before succeeding is to press "I don't know", which fails the card (plan,
- * section 12).
+ * here that reveals the shape of the character in place: the hint is a popup
+ * that covers the canvas, so it can be glimpsed but not traced.
  */
 @Composable
 private fun PromptPanel(card: CardEntity) {
@@ -229,7 +250,7 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
         }
         if (state.recognized != null && state.recognized != state.card.character) {
             Text(
-                text = "You wrote " + state.recognized,
+                text = "Recognised as " + state.recognized,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -246,7 +267,7 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
         StrokeOrderView(
             diagram = state.diagram,
             character = state.card.character,
-            modifier = Modifier.size(220.dp).padding(top = 4.dp),
+            modifier = Modifier.size(200.dp).padding(top = 4.dp),
             animate = true,
             showNumbers = true,
         )
@@ -257,10 +278,26 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             text = "How well did you recall it?",
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (state.hintCount > 0) {
+            Text(
+                text = "You used the hint, so Again is selected. Change it if you " +
+                    "actually recalled it.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+
+        // Again is included so a wrong drawing that the recogniser accepted can
+        // still be failed by the user.
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            RatingButton("Again", state.rating == Rating.AGAIN, Modifier.weight(1f)) {
+                viewModel.rate(Rating.AGAIN)
+            }
             RatingButton("Hard", state.rating == Rating.HARD, Modifier.weight(1f)) {
                 viewModel.rate(Rating.HARD)
             }
@@ -279,6 +316,14 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             enabled = state.rating != null,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Next") }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            text = "Rated the wrong card? Use Undo review in the top bar.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -290,94 +335,15 @@ private fun RatingButton(
     onClick: () -> Unit,
 ) {
     if (selected) {
-        Button(onClick = onClick, modifier = modifier) { Text(label) }
+        Button(onClick = onClick, modifier = modifier) {
+            Text(label, maxLines = 1, style = MaterialTheme.typography.labelLarge)
+        }
     } else {
-        OutlinedButton(onClick = onClick, modifier = modifier) { Text(label) }
-    }
-}
-
-// -------------------------------------------------------------------- RELEARN
-
-@Composable
-private fun RelearnContent(state: ReviewUiState.Relearn, viewModel: ReviewViewModel) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = state.card.character,
-                fontSize = 40.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(text = state.card.meaning, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    text = strokeCountLabel(state.diagram),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = "This card is marked Again. Trace the character to finish it.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        // The diagram sits underneath, dimmed, and the canvas goes on top with a
-        // transparent background: tracing is the point of this step (plan 6.4).
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            StrokeOrderView(
-                diagram = state.diagram,
-                character = state.card.character,
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                animate = true,
-                showNumbers = true,
-                strokeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f),
-                showGuideBox = false,
-            )
-            DrawingCanvas(
-                strokes = state.strokes,
-                onStrokeFinished = viewModel::onRelearnStrokeFinished,
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                enabled = !state.busy,
-                backgroundColor = Color.Transparent,
-            )
-            if (state.busy) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
-            }
-        }
-
-        MessageLine(state.message)
-
-        Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedButton(
-                onClick = viewModel::undoRelearn,
-                enabled = !state.busy && state.strokes.isNotEmpty(),
-                modifier = Modifier.weight(1f),
-            ) { Text("Undo") }
-            OutlinedButton(
-                onClick = viewModel::clearRelearn,
-                enabled = !state.busy && state.strokes.isNotEmpty(),
-                modifier = Modifier.weight(1f),
-            ) { Text("Clear") }
-            Button(
-                onClick = viewModel::submitRelearn,
-                enabled = !state.busy,
-                modifier = Modifier.weight(1.4f),
-            ) { Text("Done tracing") }
+        OutlinedButton(onClick = onClick, modifier = modifier) {
+            Text(label, maxLines = 1, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
-
-private fun strokeCountLabel(diagram: StrokeDiagram): String =
-    if (diagram.strokeCount == 0) "" else diagram.strokeCount.toString() + " strokes"
 
 // ---------------------------------------------------------------- shared bits
 
@@ -410,16 +376,17 @@ private fun CenteredMessage(text: String) {
 }
 
 @Composable
-private fun SessionComplete(onExit: () -> Unit) {
+private fun SessionComplete(state: ReviewUiState.SessionComplete, onExit: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = "Nothing left to review", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Nothing left to study", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "Come back when the next cards are due.",
+            text = "You have cleared the cards that are due today, and used up the " +
+                "new cards for today. Come back tomorrow.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

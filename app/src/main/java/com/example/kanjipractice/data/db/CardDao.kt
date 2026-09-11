@@ -11,12 +11,29 @@ import java.time.LocalDateTime
 @Dao
 interface CardDao {
 
-    /** Cards that are due at [now], most overdue first. */
-    @Query("SELECT * FROM cards WHERE due <= :now ORDER BY due ASC, id ASC")
-    fun observeDue(now: LocalDateTime): Flow<List<CardEntity>>
+    /**
+     * Cards the scheduler says are due, most overdue first.
+     *
+     * Cards that have never been reviewed ([newState]) are deliberately excluded:
+     * they are not scheduled, they enter a session only through the daily
+     * new-card allowance, which is what stops a 612-card deck from arriving all
+     * at once.
+     */
+    @Query(
+        "SELECT * FROM cards WHERE state <> :newState AND due <= :now " +
+            "ORDER BY due ASC, id ASC"
+    )
+    fun observeDueReviews(now: LocalDateTime, newState: Int): Flow<List<CardEntity>>
 
-    @Query("SELECT COUNT(*) FROM cards WHERE due <= :now")
-    fun observeDueCount(now: LocalDateTime): Flow<Int>
+    @Query("SELECT COUNT(*) FROM cards WHERE state <> :newState AND due <= :now")
+    fun observeDueReviewCount(now: LocalDateTime, newState: Int): Flow<Int>
+
+    /** Never-reviewed cards, in deck order: easier JLPT levels first. */
+    @Query("SELECT * FROM cards WHERE state = :newState ORDER BY jlpt DESC, id ASC LIMIT :limit")
+    suspend fun nextNewCards(limit: Int, newState: Int): List<CardEntity>
+
+    @Query("SELECT COUNT(*) FROM cards WHERE state = :newState")
+    fun observeNewCount(newState: Int): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM cards")
     fun observeTotalCount(): Flow<Int>

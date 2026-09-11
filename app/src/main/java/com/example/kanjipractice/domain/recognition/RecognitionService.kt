@@ -5,12 +5,19 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Where the offline Japanese recognition model is. */
 sealed interface ModelState {
-    /** Nothing has been checked yet. */
+    /** Not checked yet; the UI must not offer a download until it knows. */
     data object Unknown : ModelState
+
+    /** A check or a download is in flight. */
     data object Checking : ModelState
-    /** Downloading the model; the first run needs network. */
+
+    /** Checked, and the model genuinely is not on the device. */
+    data object NotDownloaded : ModelState
+
     data object Downloading : ModelState
+
     data object Ready : ModelState
+
     data class Failed(val message: String) : ModelState
 }
 
@@ -23,6 +30,16 @@ sealed interface ModelState {
 interface RecognitionService {
 
     val modelState: StateFlow<ModelState>
+
+    /**
+     * Checks whether the model is already on the device and updates [modelState]
+     * accordingly, **without** downloading anything.
+     *
+     * This is what the deck screen calls on start. Skipping it is why the app
+     * used to flash a "Download" button on every launch before noticing the model
+     * was already there.
+     */
+    suspend fun refreshModelState()
 
     /**
      * Makes sure the recognizer is usable, downloading the Japanese model if

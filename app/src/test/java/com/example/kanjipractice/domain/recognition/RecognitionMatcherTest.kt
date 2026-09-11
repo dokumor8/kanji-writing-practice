@@ -9,18 +9,16 @@ import kotlin.test.assertTrue
 class RecognitionMatcherTest {
 
     @Test
-    fun theTargetIsAcceptedAnywhereInTheTopThree() {
-        // Section 5.3: messy but correct drawings should pass.
-        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u99C5", "\u9A45", "\u99AC")))
-        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u9A45", "\u99C5", "\u99AC")))
-        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u9A45", "\u99AC", "\u99C5")))
+    fun onlyTheFirstCandidateIsAccepted() {
+        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u99C5", "\u9A45")))
     }
 
     @Test
-    fun theTargetIsRejectedBelowTheTopThree() {
-        assertFalse(
-            RecognitionMatcher.isCorrect("\u99C5", listOf("\u9A45", "\u99AC", "\u9A5A", "\u99C5"))
-        )
+    fun aMatchFurtherDownTheListIsRejected() {
+        // 玉 must not pass for 主: the recogniser ranks near-identical characters
+        // adjacently, so "top three" accepted visibly wrong drawings.
+        assertFalse(RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u4E3B")))
+        assertEquals(1, RecognitionMatcher.ACCEPTED_RANKS)
     }
 
     @Test

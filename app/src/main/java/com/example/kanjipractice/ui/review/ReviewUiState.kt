@@ -6,55 +6,57 @@ import com.example.kanjipractice.domain.stroke.StrokeDiagram
 import com.example.fsrs.Rating
 
 /**
- * The review state machine from plan section 6, as a single sealed type.
+ * The review state machine, as a single sealed type.
+ *
+ * There are only two resting states now. The RELEARN tracing screen is gone:
+ * "I don't know" opens a popup ([Prompt.hintVisible]) and drops the user back on
+ * the same drawing surface, so there is one screen to draw on rather than two.
  *
  * CHECK is a transition rather than a state: while recognition runs we stay in
  * [Prompt] with [Prompt.busy] set, which is what keeps the drawing on screen.
  */
 sealed interface ReviewUiState {
 
-    /** Loading the due queue. */
-    data object Loading : ReviewUiState
+    /** True while the most recent committed review can still be taken back. */
+    val canUndo: Boolean
 
-    /** Nothing is due; the session is over. */
-    data object SessionComplete : ReviewUiState
+    /** Loading the study queue. */
+    data object Loading : ReviewUiState {
+        override val canUndo: Boolean get() = false
+    }
 
-    /**
-     * PROMPT: meaning and readings only, blank canvas, no hints of any kind.
-     */
+    /** Nothing is due and the daily new-card allowance is used up. */
+    data class SessionComplete(override val canUndo: Boolean) : ReviewUiState
+
+    /** Meaning and readings only, blank canvas, no hints of any kind. */
     data class Prompt(
         val card: CardEntity,
+        /** Held here so the hint popup has it without a second load. */
+        val diagram: StrokeDiagram,
         val strokes: List<Stroke>,
         val retryCount: Int,
+        /** How many times the hint has been opened for this card. */
+        val hintCount: Int,
+        val hintVisible: Boolean,
         val message: String?,
         val busy: Boolean,
         val remaining: Int,
+        override val canUndo: Boolean,
     ) : ReviewUiState
 
     /**
-     * SUCCESS: the drawing was recognised as the target. The stroke diagram is
-     * shown for self-check and the user rates the recall.
+     * The drawing was recognised as the target. The stroke diagram is shown for
+     * self-check and the user rates the recall - including **Again**, which is
+     * the escape hatch when the recogniser accepts a wrong character.
      */
     data class Success(
         val card: CardEntity,
+        val diagram: StrokeDiagram,
         val recognized: String?,
         val rating: Rating?,
-        val diagram: StrokeDiagram,
-        val remaining: Int,
+        val hintCount: Int,
         val retryCount: Int,
-    ) : ReviewUiState
-
-    /**
-     * RELEARN: reached only from "I don't know". The diagram is shown and the
-     * user must trace the character before moving on. The rating is locked to
-     * Again, so this state has no rating buttons.
-     */
-    data class Relearn(
-        val card: CardEntity,
-        val strokes: List<Stroke>,
-        val diagram: StrokeDiagram,
-        val message: String?,
-        val busy: Boolean,
         val remaining: Int,
+        override val canUndo: Boolean,
     ) : ReviewUiState
 }

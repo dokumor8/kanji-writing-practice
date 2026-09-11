@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -19,19 +22,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kanjipractice.domain.recognition.ModelState
 
 /**
- * The deck list (plan, section 9.1). The prototype ships a single deck, so this
- * screen is really "start a session", plus the one piece of setup the app needs:
- * the offline recognition model.
+ * The deck list (plan, section 9.1), plus the two bits of setup the app needs:
+ * the offline recognition model, and how many new cards to feed in per day.
  */
 @Composable
 fun DeckListScreen(
@@ -41,8 +45,15 @@ fun DeckListScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Counts depend on the wall clock and on the study day, so recompute them
+    // whenever the screen is resumed rather than trusting the values computed
+    // when the ViewModel was created.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onResumed()
+    }
+
     Column(
-        Modifier.fillMaxSize().padding(20.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
@@ -57,7 +68,7 @@ fun DeckListScreen(
             modifier = Modifier.padding(top = 4.dp),
         )
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
 
         Surface(
             shape = RoundedCornerShape(16.dp),
@@ -71,17 +82,27 @@ fun DeckListScreen(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = state.dueCount.toString() + " due - " +
+                    text = state.dueReviews.toString() + " due  -  " +
+                        state.newAvailable.toString() + " new  -  " +
                         state.totalCount.toString() + " cards",
                     style = MaterialTheme.typography.bodyLarge,
                 )
+                if (state.newAllowanceUsedUp) {
+                    Text(
+                        text = "Daily new-card limit reached. This is what keeps the " +
+                            "deck from burying you.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = onStartReview,
-                    enabled = !state.loading && state.dueCount > 0,
+                    enabled = !state.loading && state.studyCount > 0,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state.dueCount > 0) "Start review" else "Nothing due")
+                    Text(if (state.studyCount > 0) "Start review" else "Nothing to study")
                 }
                 TextButton(onClick = onBrowse, modifier = Modifier.fillMaxWidth()) {
                     Text("Browse all cards")
@@ -89,7 +110,15 @@ fun DeckListScreen(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(16.dp))
+
+        DailyNewLimitRow(
+            limit = state.dailyNewLimit,
+            introducedToday = state.introducedToday,
+            onNudge = viewModel::nudgeDailyNewLimit,
+        )
+
+        Spacer(Modifier.height(16.dp))
 
         ModelStatusRow(state.modelState, onPrepare = viewModel::prepareModel)
 
@@ -105,8 +134,54 @@ fun DeckListScreen(
 }
 
 /**
- * The one place where the app needs the network (plan, section 12): ML Kit's
- * Japanese model is a one-off download and recognition is offline afterwards.
+ * The daily new-card allowance. It is a plain stepper rather than a slider so the
+ * value is readable and reproducible.
+ */
+@Composable
+private fun DailyNewLimitRow(
+    limit: Int,
+    introducedToday: Int,
+    onNudge: (Int) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(text = "New cards per day", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = introducedToday.toString() + " introduced today",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            OutlinedButton(
+                onClick = { onNudge(-1) },
+                enabled = limit > 0,
+                modifier = Modifier.size(width = 56.dp, height = 40.dp),
+            ) { Text("-") }
+            Text(
+                text = limit.toString(),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(48.dp),
+            )
+            OutlinedButton(
+                onClick = { onNudge(+1) },
+                modifier = Modifier.size(width = 56.dp, height = 40.dp),
+            ) { Text("+") }
+        }
+    }
+}
+
+/**
+ * The one place where the app needs the network: ML Kit's Japanese model is a
+ * one-off download and recognition is offline afterwards.
  */
 @Composable
 private fun ModelStatusRow(state: ModelState, onPrepare: () -> Unit) {
@@ -123,8 +198,9 @@ private fun ModelStatusRow(state: ModelState, onPrepare: () -> Unit) {
                 Text(text = "Handwriting model", style = MaterialTheme.typography.labelLarge)
                 Text(
                     text = when (state) {
-                        ModelState.Unknown -> "Not checked yet"
+                        ModelState.Unknown -> "Checking whether it is already installed..."
                         ModelState.Checking -> "Checking..."
+                        ModelState.NotDownloaded -> "Not installed yet"
                         ModelState.Downloading -> "Downloading the Japanese model..."
                         ModelState.Ready -> "Ready - recognition works offline"
                         is ModelState.Failed -> "Unavailable: " + state.message
@@ -138,11 +214,20 @@ private fun ModelStatusRow(state: ModelState, onPrepare: () -> Unit) {
                 )
             }
             when (state) {
-                ModelState.Downloading, ModelState.Checking ->
+                // Never offer a download until a check has actually said the
+                // model is missing: that is what used to make the button flash
+                // on every launch and then vanish.
+                ModelState.Unknown, ModelState.Checking, ModelState.Downloading ->
                     CircularProgressIndicator(Modifier.size(20.dp))
+
                 ModelState.Ready -> Unit
-                else -> OutlinedButton(onClick = onPrepare) {
-                    Text(if (state is ModelState.Failed) "Retry" else "Download")
+
+                ModelState.NotDownloaded -> OutlinedButton(onClick = onPrepare) {
+                    Text("Download")
+                }
+
+                is ModelState.Failed -> OutlinedButton(onClick = onPrepare) {
+                    Text("Retry")
                 }
             }
         }

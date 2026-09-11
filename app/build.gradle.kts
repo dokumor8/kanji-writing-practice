@@ -16,8 +16,8 @@ android {
         // it keeps the API surface small.
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {
@@ -95,6 +95,9 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    // Persists the one study preference (daily new-card limit).
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     testImplementation(kotlin("test"))
     testImplementation(kotlin("test-junit"))

@@ -20,18 +20,21 @@ class DefaultReviewLogRepository @Inject constructor(
         usedIDontKnow: Boolean,
         retryCount: Int,
         reviewedAt: LocalDateTime,
-    ) {
-        reviewLogDao.insert(
-            ReviewLogEntity(
-                cardId = cardId,
-                rating = rating.value,
-                usedIDontKnow = usedIDontKnow,
-                retryCount = retryCount,
-                reviewedAt = reviewedAt,
-            )
+    ): Long = reviewLogDao.insert(
+        ReviewLogEntity(
+            cardId = cardId,
+            rating = rating.value,
+            usedIDontKnow = usedIDontKnow,
+            retryCount = retryCount,
+            reviewedAt = reviewedAt,
         )
-    }
+    )
+
+    override suspend fun delete(id: Long) = reviewLogDao.deleteById(id)
 
     override fun observeRecent(limit: Int): Flow<List<ReviewLogEntity>> =
         reviewLogDao.observeRecent(limit)
+
+    override fun observeIntroducedSince(since: LocalDateTime): Flow<Int> =
+        reviewLogDao.observeIntroducedSince(since)
 }

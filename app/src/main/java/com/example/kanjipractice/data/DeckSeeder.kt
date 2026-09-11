@@ -24,10 +24,10 @@ class DeckSeeder @Inject constructor(
     @ApplicationContext private val context: Context,
     private val cardDao: CardDao,
     private val clock: Clock,
-) {
+) : DeckInitializer {
 
     /** Returns the number of cards inserted; 0 when the deck was already seeded. */
-    suspend fun seedIfEmpty(): Int {
+    override suspend fun seedIfEmpty(): Int {
         if (cardDao.count() > 0) return 0
         val cards = loadDeck()
         cardDao.insertAll(cards)

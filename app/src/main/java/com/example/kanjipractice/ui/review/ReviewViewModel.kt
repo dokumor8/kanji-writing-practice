@@ -2,13 +2,18 @@ package com.example.kanjipractice.ui.review
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.recognition.RecognitionMatcher
 import com.example.kanjipractice.domain.recognition.RecognitionService
 import com.example.kanjipractice.domain.repository.CardRepository
 import com.example.kanjipractice.domain.repository.ReviewLogRepository
 import com.example.kanjipractice.domain.scheduler.ReviewScheduler
+import com.example.kanjipractice.domain.session.StudyQueueBuilder
+import com.example.kanjipractice.domain.settings.StudySettings
+import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import com.example.kanjipractice.domain.stroke.StrokeDiagramProvider
+import com.example.kanjipractice.domain.util.DayBoundary
 import com.example.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -20,38 +25,58 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Clock
 import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 
 /**
- * Owns the review state machine (plan, section 6).
+ * Owns the review state machine.
  *
- * The session's due queue is snapshotted when the session starts, which is what
- * an SRS session should do: a card rescheduled during the session does not jump
+ * The session's queue is built once when the session starts, which is what an
+ * SRS session should do: a card rescheduled during the session does not jump
  * back into this session's queue.
  */
 @HiltViewModel
 class ReviewViewModel @Inject constructor(
     private val cardRepository: CardRepository,
     private val reviewLogRepository: ReviewLogRepository,
+    private val settingsRepository: StudySettingsRepository,
     private val scheduler: ReviewScheduler,
     private val recognitionService: RecognitionService,
     private val strokeDataService: StrokeDiagramProvider,
     private val clock: Clock,
+    private val zone: ZoneId,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ReviewUiState>(ReviewUiState.Loading)
     val uiState: StateFlow<ReviewUiState> = _uiState.asStateFlow()
 
-    private var queue: List<com.example.kanjipractice.data.db.CardEntity> = emptyList()
+    private var queue: List<CardEntity> = emptyList()
     private var position = 0
 
     // Per-card state, reset whenever a new card is shown.
     private var strokes: List<Stroke> = emptyList()
     private var retryCount = 0
-    private var usedIDontKnow = false
+    private var hintCount = 0
     private var userRating: Rating? = null
 
     private var messageJob: Job? = null
+    private var undoRecord: UndoRecord? = null
+
+    /**
+     * Everything needed to take a review back. Only the most recent review can be
+     * undone (the same one-level undo Anki offers), which is enough to fix a
+     * misclick without turning the review log into a general edit surface.
+     */
+    private data class UndoRecord(
+        val cardIndex: Int,
+        /** The card as it was before the review, from the session snapshot. */
+        val cardBefore: CardEntity,
+        val logId: Long,
+        /** The screen to put the user back on, so they can just re-rate. */
+        val stateBefore: ReviewUiState.Success,
+        val hintCount: Int,
+        val retryCount: Int,
+    )
 
     init {
         startSession()
@@ -62,36 +87,56 @@ class ReviewViewModel @Inject constructor(
     fun startSession() {
         viewModelScope.launch {
             _uiState.value = ReviewUiState.Loading
-            queue = cardRepository.observeDue(LocalDateTime.now(clock)).first()
+            queue = buildQueue()
             position = 0
+            undoRecord = null
             if (queue.isEmpty()) {
-                _uiState.value = ReviewUiState.SessionComplete
+                _uiState.value = ReviewUiState.SessionComplete(canUndo = false)
                 return@launch
             }
             showCurrentCard()
             // Warm the recogniser up in the background so the first Submit is not
-            // the thing that waits for the model download. Failure is reported by
-            // Submit instead, where the user can actually do something about it.
+            // the thing that waits for the model download.
             launch { runCatching { recognitionService.prepare() } }
         }
     }
 
-    private fun showCurrentCard() {
-        val card = queue.getOrNull(position) ?: run {
-            _uiState.value = ReviewUiState.SessionComplete
+    private suspend fun buildQueue(): List<CardEntity> {
+        val settings = currentStudySettings()
+        val dueReviews = cardRepository.observeDueReviews(LocalDateTime.now(clock)).first()
+        val newCards = cardRepository.nextNewCards(settings.remainingNewAllowance)
+        return StudyQueueBuilder.build(dueReviews, newCards, settings.remainingNewAllowance)
+    }
+
+    private suspend fun currentStudySettings(): StudySettings {
+        val limit = settingsRepository.observeDailyNewLimit().first()
+        val introduced = reviewLogRepository
+            .observeIntroducedSince(DayBoundary.startOfToday(clock, zone))
+            .first()
+        return StudySettings(dailyNewLimit = limit, introducedToday = introduced)
+    }
+
+    private suspend fun showCurrentCard() {
+        val card = queue.getOrNull(position)
+        if (card == null) {
+            _uiState.value = ReviewUiState.SessionComplete(canUndo = undoRecord != null)
             return
         }
         strokes = emptyList()
         retryCount = 0
-        usedIDontKnow = false
+        hintCount = 0
         userRating = null
         _uiState.value = ReviewUiState.Prompt(
             card = card,
+            diagram = strokeDataService.diagramFor(card.character),
             strokes = emptyList(),
             retryCount = 0,
+            hintCount = 0,
+            hintVisible = false,
             message = null,
             busy = false,
             remaining = remaining,
+            canUndo = undoRecord != null,
         )
     }
 
@@ -103,7 +148,7 @@ class ReviewViewModel @Inject constructor(
     }
 
     /** Removes the last stroke. The drawing survives failed attempts. */
-    fun undo() = mutatePrompt { state ->
+    fun undoStroke() = mutatePrompt { state ->
         strokes = strokes.dropLast(1)
         state.copy(strokes = strokes)
     }
@@ -113,9 +158,24 @@ class ReviewViewModel @Inject constructor(
         state.copy(strokes = strokes)
     }
 
+    // ---------------------------------------------------------------- hint
+
+    /**
+     * "I don't know" opens the stroke hint. It no longer fails the card by
+     * itself: the user closes the popup, draws from memory, and the result screen
+     * opens with Again selected, which they may change if they genuinely recalled
+     * it after the glance.
+     */
+    fun showHint() = mutatePrompt { state ->
+        hintCount++
+        state.copy(hintVisible = true, hintCount = hintCount)
+    }
+
+    fun dismissHint() = mutatePrompt { state -> state.copy(hintVisible = false) }
+
     // ------------------------------------------------------------- actions
 
-    /** Submit from PROMPT: recognise, then succeed or stay put (plan 6.2). */
+    /** Submit from PROMPT: recognise, then succeed or stay put. */
     fun submit() {
         val state = _uiState.value as? ReviewUiState.Prompt ?: return
         if (state.busy) return
@@ -143,12 +203,14 @@ class ReviewViewModel @Inject constructor(
             if (RecognitionMatcher.isCorrect(state.card.character, candidates)) {
                 _uiState.value = ReviewUiState.Success(
                     card = state.card,
+                    diagram = state.diagram,
                     recognized = RecognitionMatcher.bestCandidate(candidates),
-                    rating = null,
-                    // Shown for self-check: the user confirms their stroke order.
-                    diagram = strokeDataService.diagramFor(state.card.character),
-                    remaining = remaining,
+                    // A peek costs the card by default, but the user decides.
+                    rating = if (hintCount > 0) Rating.AGAIN else null,
+                    hintCount = hintCount,
                     retryCount = retryCount,
+                    remaining = remaining,
+                    canUndo = undoRecord != null,
                 )
             } else {
                 retryCount++
@@ -162,59 +224,7 @@ class ReviewViewModel @Inject constructor(
         }
     }
 
-    /**
-     * "I don't know" (plan 6.4): fail the card, show the diagram, and force a
-     * tracing step. The card's rating is locked to Again from here on.
-     */
-    fun iDontKnow() {
-        val state = _uiState.value as? ReviewUiState.Prompt ?: return
-        usedIDontKnow = true
-        // RELEARN gets a fresh, empty canvas over the diagram.
-        strokes = emptyList()
-        viewModelScope.launch {
-            val diagram = strokeDataService.diagramFor(state.card.character)
-            _uiState.value = ReviewUiState.Relearn(
-                card = state.card,
-                strokes = emptyList(),
-                diagram = diagram,
-                message = null,
-                busy = false,
-                remaining = remaining,
-            )
-        }
-    }
-
-    fun onRelearnStrokeFinished(stroke: Stroke) = mutateRelearn { state ->
-        strokes = strokes + stroke
-        state.copy(strokes = strokes)
-    }
-
-    fun undoRelearn() = mutateRelearn { state ->
-        strokes = strokes.dropLast(1)
-        state.copy(strokes = strokes)
-    }
-
-    fun clearRelearn() = mutateRelearn { state ->
-        strokes = emptyList()
-        state.copy(strokes = strokes)
-    }
-
-    /**
-     * Tracing is motor practice, not a test, so a non-empty drawing always
-     * passes (plan 6.4). The card is scheduled as Again and the session advances.
-     */
-    fun submitRelearn() {
-        val state = _uiState.value as? ReviewUiState.Relearn ?: return
-        if (state.busy) return
-        if (strokes.isEmpty()) {
-            setRelearnMessage(state, MESSAGE_EMPTY_TRACING)
-            return
-        }
-        _uiState.value = state.copy(busy = true, message = null)
-        viewModelScope.launch { persistAndAdvance(Rating.AGAIN) }
-    }
-
-    /** Stores the rating on the SUCCESS screen; Next is what commits it. */
+    /** Stores the rating on the success screen; Next is what commits it. */
     fun rate(rating: Rating) {
         val state = _uiState.value as? ReviewUiState.Success ?: return
         userRating = rating
@@ -224,29 +234,58 @@ class ReviewViewModel @Inject constructor(
     fun next() {
         val state = _uiState.value as? ReviewUiState.Success ?: return
         val rating = userRating ?: return
-        viewModelScope.launch { persistAndAdvance(rating) }
+        viewModelScope.launch { persistAndAdvance(state, rating) }
+    }
+
+    /**
+     * Takes the last committed review back: the log row is deleted, the card is
+     * restored to the state it had before, and the user is put back on the rating
+     * screen with the rating cleared.
+     *
+     * Deleting the log row also, and deliberately, un-counts the card against the
+     * daily new-card allowance.
+     */
+    fun undoLastReview() {
+        val record = undoRecord ?: return
+        undoRecord = null
+        viewModelScope.launch {
+            reviewLogRepository.delete(record.logId)
+            cardRepository.update(record.cardBefore)
+            position = record.cardIndex
+            hintCount = record.hintCount
+            retryCount = record.retryCount
+            _uiState.value = record.stateBefore.copy(rating = null, canUndo = false)
+        }
     }
 
     // --------------------------------------------------------------- plumbing
 
-    private suspend fun persistAndAdvance(rating: Rating) {
+    private suspend fun persistAndAdvance(state: ReviewUiState.Success, rating: Rating) {
         val card = queue.getOrNull(position)
-        if (card != null) {
-            val now = LocalDateTime.now(clock)
-            // Again can only come from the "I don't know" path, never from the
-            // success screen (plan 4.3), so the log records which it was.
-            cardRepository.update(scheduler.schedule(card, rating, now))
-            reviewLogRepository.log(
-                cardId = card.id,
-                rating = rating,
-                usedIDontKnow = usedIDontKnow,
-                retryCount = retryCount,
-                reviewedAt = now,
-            )
+        if (card == null) {
+            _uiState.value = ReviewUiState.SessionComplete(canUndo = undoRecord != null)
+            return
         }
+        val now = LocalDateTime.now(clock)
+        cardRepository.update(scheduler.schedule(card, rating, now))
+        val logId = reviewLogRepository.log(
+            cardId = card.id,
+            rating = rating,
+            usedIDontKnow = hintCount > 0,
+            retryCount = retryCount,
+            reviewedAt = now,
+        )
+        undoRecord = UndoRecord(
+            cardIndex = position,
+            cardBefore = card,
+            logId = logId,
+            stateBefore = state,
+            hintCount = hintCount,
+            retryCount = retryCount,
+        )
         position++
         if (position >= queue.size) {
-            _uiState.value = ReviewUiState.SessionComplete
+            _uiState.value = ReviewUiState.SessionComplete(canUndo = true)
         } else {
             showCurrentCard()
         }
@@ -260,14 +299,6 @@ class ReviewViewModel @Inject constructor(
         _uiState.value = block(state)
     }
 
-    private inline fun mutateRelearn(
-        crossinline block: (ReviewUiState.Relearn) -> ReviewUiState.Relearn,
-    ) {
-        val state = _uiState.value as? ReviewUiState.Relearn ?: return
-        if (state.busy) return
-        _uiState.value = block(state)
-    }
-
     private fun setPromptMessage(
         state: ReviewUiState.Prompt,
         message: String,
@@ -277,22 +308,17 @@ class ReviewViewModel @Inject constructor(
         if (clearAfterMillis != null) scheduleMessageClear(clearAfterMillis)
     }
 
-    private fun setRelearnMessage(state: ReviewUiState.Relearn, message: String) {
-        _uiState.value = state.copy(busy = false, message = message)
-    }
-
     /**
      * The failure message is transient: it must not sit there nagging the user,
-     * who is free to retry for as long as they like (plan 6.2).
+     * who is free to retry for as long as they like.
      */
     private fun scheduleMessageClear(afterMillis: Long) {
         messageJob?.cancel()
         messageJob = viewModelScope.launch {
             delay(afterMillis)
-            when (val state = _uiState.value) {
-                is ReviewUiState.Prompt -> _uiState.value = state.copy(message = null)
-                is ReviewUiState.Relearn -> _uiState.value = state.copy(message = null)
-                else -> Unit
+            val state = _uiState.value
+            if (state is ReviewUiState.Prompt) {
+                _uiState.value = state.copy(message = null)
             }
         }
     }
@@ -301,7 +327,6 @@ class ReviewViewModel @Inject constructor(
         const val TRANSIENT_MESSAGE_MILLIS = 2_500L
         const val MESSAGE_NOT_QUITE = "Not quite - try again."
         const val MESSAGE_EMPTY_DRAWING = "Draw the character first."
-        const val MESSAGE_EMPTY_TRACING = "Trace the character to continue."
         const val MESSAGE_RECOGNITION_UNAVAILABLE =
             "Recognition is unavailable. Check the model download and try again."
     }

@@ -6,40 +6,58 @@ character on a touch canvas; ML Kit recognises the whole character and tells you
 whether you got it. FSRS v6 schedules the reviews. Everything works offline once
 the recognition model has been downloaded once, and there are no ads.
 
-It is an implementation of `../planning/kanji_app.txt`.
+It is an implementation of `../planning/kanji_app.txt`, revised after a round of
+hands-on testing on a real phone (see "What changed in 1.1").
 
 ## The design in one paragraph
 
 **Nothing on the prompt screen may hint at the shape of the character.** There is
-no faded outline, no first-stroke hint, no "show me" button, and no stroke-order
-animation before the answer is committed. The only way to see the diagram before
-succeeding is to press **I don't know**, which fails the card, shows the diagram,
-and forces you to trace the character before the card can be dismissed. A
-successful drawing reveals the diagram for self-check and asks you to rate the
-recall Hard / Good / Easy. "Again" can only ever be produced by the "I don't
-know" path, and the success screen cannot upgrade it — that is what keeps the
-schedule honest.
+no faded outline, no first-stroke hint, and no diagram on screen while you draw.
+If you are stuck you press **I don't know**, which opens the stroke diagram as a
+**popup**: you look at it, close it, and then draw. Because the popup covers the
+canvas, the character has to survive a few seconds in working memory before it can
+be drawn — a peek, not a reference to trace. The result screen then opens with
+**Again** selected, so peeking is honest about what it cost, but you can override
+it if you genuinely recalled the character after the glance.
+
+## The review loop
 
 ```
-        PROMPT  (meaning + readings, blank canvas)
+        PROMPT  (meaning + readings, blank square canvas)
           |  Submit
           v
-        CHECK  ---- not recognised ----> PROMPT again (drawing kept, retry counted)
-          |  recognised (top-3)
+        CHECK  -- not the model's first choice --> PROMPT again
+          |                                          (drawing kept, retry counted)
+          |  recognised (top-1 only)
           v
-        SUCCESS (stroke diagram, Hard/Good/Easy)  -- Next --> FSRS, next card
+        SUCCESS  (stroke diagram + Again / Hard / Good / Easy)
+          |  Next
+          v
+        FSRS schedules the card, next card appears
 
-        PROMPT -- "I don't know" --> RELEARN (diagram + tracing canvas)
-                                        |  Submit (any non-empty trace passes)
-                                        v
-                                     rating locked to AGAIN, FSRS, next card
+        "I don't know"  ->  stroke-hint POPUP  ->  close  ->  draw
+                            (repeatable; a hint pre-selects Again on SUCCESS)
+
+        "Undo review" (top bar)  ->  the last committed review is taken back and
+                                     you are returned to its rating screen
 ```
+
+## Study limits
+
+New cards are **not** dumped in all at once. A session is built as:
+
+1. every card the scheduler says is due, then
+2. never-seen cards, up to whatever is left of the **daily new-card allowance**
+   (20/day by default, adjustable on the deck screen in steps of 5).
+
+The allowance is derived from the review log rather than from a counter — it
+counts cards whose *first ever* review happened today — which means undoing a
+review automatically gives the card back.
 
 ## Building
 
 The Android SDK and Gradle caches already present in the parent directory are
-reused, so no download of the toolchain is needed beyond the app's own
-dependencies.
+reused, so no toolchain download is needed beyond the app's own dependencies.
 
 ```bash
 export GRADLE_USER_HOME=/common/cr/programming/mobile/video_player/.buildcache/gradle-user-home
@@ -53,8 +71,9 @@ export ANDROID_USER_HOME=/common/cr/programming/mobile/video_player/.buildcache/
 `/common/cr/programming/mobile/video_player/.buildcache/android-sdk` (compileSdk 35,
 build-tools 34/35, both already installed). It is git-ignored, as usual.
 
-To run it: `adb install -r app/build/outputs/apk/debug/app-debug.apk`. The debug
-APK is ~42 MB, almost all of it ML Kit's on-device recognition engine.
+To install: `adb install -r app/build/outputs/apk/debug/app-debug.apk`. The debug
+APK is ~44 MB, almost all of it ML Kit's on-device recognition engine. The database
+schema did not change in 1.1, so installing over 1.0 keeps your existing progress.
 
 ## Project layout
 
@@ -62,89 +81,133 @@ APK is ~42 MB, almost all of it ML Kit's on-device recognition engine.
 | --- | --- |
 | `app/src/main/assets/kanji.json` | The bundled deck: 612 kanji, JLPT N5–N3. |
 | `app/src/main/assets/kanjivg/` | KanjiVG stroke-order SVGs, one per card, named by code point. |
-| `app/src/main/java/.../domain/scheduler/` | FSRS wrapper: memory state in, next due date out. |
-| `app/src/main/java/.../domain/recognition/` | ML Kit digital ink, coordinate normalisation, the top-3 acceptance rule. |
-| `app/src/main/java/.../domain/stroke/` | KanjiVG parser and SVG path-data parser. |
-| `app/src/main/java/.../ui/review/` | The state machine and the review screen. |
-| `app/src/main/java/.../ui/components/` | `DrawingCanvas` and `StrokeOrderView`. |
+| `.../domain/session/StudyQueueBuilder.kt` | What a session contains: due reviews first, then capped new cards. |
+| `.../domain/settings/` | The daily new-card limit and how it is persisted. |
+| `.../domain/util/DayBoundary.kt` | Where one study day ends, in the user's time zone. |
+| `.../domain/scheduler/` | FSRS wrapper: memory state in, next due date out. |
+| `.../domain/recognition/` | ML Kit digital ink, coordinate normalisation, top-1 acceptance. |
+| `.../domain/stroke/` | KanjiVG parser and SVG path-data parser. |
+| `.../ui/review/` | The review state machine and screen. |
+| `.../ui/components/` | `DrawingCanvas`, `StrokeOrderView`, `StrokeHintDialog`. |
 | `fsrs/` | Vendored FSRS v6, a dependency-free Kotlin JVM module. |
 | `tools/build_assets.py` | Regenerates `kanji.json` and the bundled SVGs from their upstream sources. |
 
-## Tests
+## What changed in 1.1
 
-84 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
+Driven by testing the 1.0 build on a phone.
 
-* **FSRS (17)** — replays published reference vectors from the fsrs-rs
-  implementation's own test suite (retrievability, initial stability and
-  difficulty, next difficulty including mean reversion, all three stability
-  formulas), then asserts the invariants the algorithm is supposed to have:
-  `R(S, S) = 90%`, higher ratings produce longer intervals, a lapse shrinks
-  stability, reviewing late is rewarded, and every state stays inside its legal
-  range across a long simulated history.
-* **Review state machine (19)** — the whole of plan section 6 driven through
-  fakes: drawing persistence across failed attempts, `retryCount` bookkeeping,
-  "I don't know" clearing the canvas and locking the rating to Again, lenient
-  tracing, `Next` refusing to commit without a rating, and a recognition outage
-  not being counted as a failed attempt.
-* **Bundled data (22)** — parses every one of the 612 bundled SVGs and asserts
-  each is well formed, has one stroke number per stroke, and belongs to a card;
-  and validates the deck itself (unique single-character entries, no example word
-  leaking its own answer, on-yomi in katakana).
-* **Parsers and helpers (26)** — SVG path-data commands including implicit
-  repeats and smooth-curve reflection, KanjiVG extraction, stroke normalisation
-  (aspect ratio preserved, canvas-size independent, no division by zero).
+1. **"There was nothing to review" at first, then everything appeared.**
+   Root cause found: new cards were seeded with `due = now`, and the deck screen
+   queried them against a `now` captured when the ViewModel was created. Cards
+   seeded a moment later were therefore born slightly in the future and stayed
+   invisible until the app was restarted. Fixed twice over — new cards are no
+   longer part of the "due" query at all (they enter through the allowance), and
+   the counts are recomputed whenever the screen resumes.
+
+2. **A daily new-card limit.** The plan did not mention one, and without it a
+   612-card deck presents itself in full. Default 20/day, adjustable on the deck
+   screen. See "Study limits" above.
+
+3. **The hint is a popup, not a tracing screen.** The RELEARN screen is gone. The
+   prompt and the learning step are now the same surface, as requested. Pressing
+   "I don't know" opens an animated, stroke-numbered diagram over the canvas;
+   closing it (button or tap outside) returns you to your drawing. It can be
+   reopened as often as you like, and it no longer fails the card by itself —
+   instead the result screen pre-selects **Again** and says why, which you may
+   override.
+
+4. **Only the recogniser's first choice counts.** Accepting the top three was
+   letting 玉 pass for 主, because near-identical characters are ranked
+   adjacently. Accepting a wrong character as correct is worse than occasionally
+   asking the user to draw again.
+
+5. **"Again" is now a rating on the result screen**, as the escape hatch for the
+   false positives that still get through.
+
+6. **Undo review.** A top-bar action that deletes the last review-log row,
+   restores the card to its stored state, and returns you to that card's rating
+   screen with the rating cleared. One level, like Anki. It also hands the card
+   back to the daily new-card allowance.
+
+7. **The model-download button no longer flashes on launch.** The screen used to
+   render `Unknown` as "not downloaded" and offer a Download button until an
+   asynchronous check came back. It now distinguishes *unchecked* from *checked
+   and missing*, auto-checks on start and on resume, and only ever offers a
+   download once a check has actually said the model is absent.
+
+8. **Recognition input tweaks** for the reported near-miss on 二: the writing area
+   is now declared to ML Kit via `RecognitionContext`/`WritingArea`, real touch
+   timestamps are passed through instead of a synthetic fixed interval, and the
+   canvas is a true square so the geometry the model sees is consistent across
+   devices.
 
 ## Where this deviates from the plan, and why
 
-Everything in the plan is implemented. These are the places where the plan could
-not be followed literally, or where a decision had to be supplied.
+Everything in the plan is implemented, except where testing changed the design
+(items 3–5 above) or where the plan could not be followed literally.
 
 1. **FSRS is vendored, not a dependency.** The plan suggests
    `com.github.open-spaced-repetition:fsrs-kotlin:v6.0.0` from JitPack. Those
    coordinates do not exist (404 on both JitPack and Maven Central), so FSRS-6 is
-   implemented in `fsrs/` as a plain Kotlin JVM module, ported from the
-   reference implementation (`open-spaced-repetition/fsrs-rs`, `src/model_v6.rs`)
-   and pinned by its test vectors. It is ~200 lines, has no dependencies, and
-   makes the build reproducible and offline.
+   implemented in `fsrs/` as a plain Kotlin JVM module, ported from the reference
+   implementation (`open-spaced-repetition/fsrs-rs`, `src/model_v6.rs`) and pinned
+   by its test vectors.
 
 2. **ML Kit 19.0.0's API differs from the plan's sample code.**
    `DigitalInkRecognizer.recognize()` returns `Task<RecognitionResult>` rather
    than `Task<List<RecognitionCandidate>>`, and the classes live in
-   `com.google.mlkit.vision.digitalink.recognition` rather than
-   `...digitalink`. The plan's snippet is written against 18.x.
+   `com.google.mlkit.vision.digitalink.recognition` rather than `...digitalink`.
 
-3. **"Again" gets a short relearning step.** FSRS produces a *stability*, and
-   turning that into a due date is scheduler policy that FSRS deliberately does
-   not specify. A lapse here is due 10 minutes later (so the card comes back in
-   the same sitting, which is what makes the forced tracing step worth doing) and
-   everything else gets at least a day. Both constants are named and commented in
-   `ReviewScheduler`.
+3. **"Again" gets a short relearning step.** FSRS produces a *stability*; turning
+   that into a due date is scheduler policy FSRS deliberately does not specify. A
+   lapse is due 10 minutes later and everything else gets at least a day. Both
+   constants are named and commented in `ReviewScheduler`.
 
-4. **Card state is an enum stored as an Int.** Same column, same values as the
-   plan's `state: Int`, but type-safe in Kotlin.
+4. **Full retention is not enforced by the recogniser alone.** "Again is locked"
+   from the plan's section 12 is now "Again is pre-selected after a hint", by
+   request. The rating is the user's call.
 
-5. **Timestamps are UTC.** The plan types the FSRS fields as `LocalDateTime`;
-   they are stored as epoch millis interpreted as UTC, and the app's `Clock` is
-   UTC, so due-date arithmetic cannot shift when the device's time zone changes.
+5. **Card state is an enum stored as an Int**, with the numbering pinned by a test
+   because it is part of the persistence contract.
 
-6. **The example word is stored already blanked** (`"＿前"` for 駅前), exactly as
-   the plan's schema shows. The UI blanks it again defensively, so a deck that
-   ships the unblanked form still cannot leak the answer. 547 of the 612 cards
-   have one; 駅, for instance, does not, because the JLPT vocabulary lists used
-   to pick compounds contain no N5–N3 word beginning with it. The field is
-   nullable and the UI omits it.
+6. **Timestamps are UTC**, and the study-day boundary is the user's local
+   midnight. `DayBoundary` translates between the two.
 
-7. **UI strings are inline in Compose, not in `strings.xml`.** `strings.xml`
-   holds only `app_name`. The plan has no localisation requirement; adding one
-   would be a mechanical change.
+7. **The example word is stored already blanked** (`"＿前"` for 駅前), as the plan's
+   schema shows. The UI blanks it again defensively. 547 of the 612 cards have
+   one; 駅 does not, because the JLPT vocabulary lists used to pick compounds
+   contain no N5–N3 word beginning with it.
 
-8. **There is no session size limit.** The plan does not specify one, so a
-   session queues every due card and the user leaves when they are done.
+8. **UI strings are inline in Compose**, not in `strings.xml`; `strings.xml` holds
+   only `app_name`.
 
-9. **Small additions the plan marks optional.** The browse screen (§9.3, "useful
-   for debugging") is implemented, and the stroke diagrams animate on the success
-   and relearn screens (§5.4, "a polish item") — the static diagram is what
-   carries the information.
+9. **The browse screen and diagram animation are implemented** — both were marked
+   optional or low priority in the plan.
+
+## Tests
+
+123 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
+
+* **FSRS (17)** — replays published reference vectors from the fsrs-rs
+  implementation's own test suite, then asserts the invariants the algorithm is
+  supposed to have: `R(S, S) = 90%`, higher ratings produce longer intervals, a
+  lapse shrinks stability, reviewing late is rewarded, and every state stays
+  inside its legal range across a long simulated history.
+* **Review state machine (27)** — the daily new-card cap (including that a spent
+  allowance produces no new cards, and that due reviews are never capped), drawing
+  persistence across failed attempts, top-1 rejection of a second-rank match, the
+  hint opening without committing anything and being reopenable, Again being
+  pre-selected after a hint but overridable, and undo restoring the card, the log
+  and the daily allowance.
+* **Deck screen (12)** — the regression test for the "nothing to review" bug (a
+  deck seeded *after* the screen loads must be visible without a restart), the
+  allowance arithmetic, and the settings stepper's clamps.
+* **Bundled data (13)** — parses every one of the 612 bundled SVGs and asserts
+  each is well formed, has one stroke number per stroke, and belongs to a card;
+  and validates the deck itself.
+* **Parsers, scheduling and settings (54)** — SVG path-data commands, KanjiVG
+  extraction, stroke normalisation, the FSRS-to-due-date policy (8), day
+  boundaries across time zones, and the settings arithmetic.
 
 ## Data sources and attribution
 
@@ -156,12 +219,8 @@ from `jamsinclair/open-anki-jlpt-decks` (MIT).
 ## Not verified here
 
 There is no KVM in this environment and no emulator or system image installed, so
-the app could not be launched. What **is** verified is that it compiles, packages
-into a debug APK, and that all 84 unit tests pass. Untested at runtime: ML Kit
-model download and recognition accuracy on real handwriting, Compose layout at
-real screen sizes, and Room persistence on device.
-
-If you want runtime verification, the practical option is a physical device
-(`adb install`). Installing the emulator plus a system image would work, but
-without `/dev/kvm` it would run under full software emulation — say the word if
-you want it anyway.
+the app cannot be launched here. What **is** verified is that it compiles,
+packages into a debug APK, and that all 123 unit tests pass. Untested at runtime:
+ML Kit model download and recognition accuracy on real handwriting (including
+whether the writing-area and timestamp changes actually help 二), Compose layout
+at real screen sizes, and Room persistence on device.

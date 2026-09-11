@@ -2,6 +2,7 @@ package com.example.kanjipractice.data
 
 import com.example.kanjipractice.data.db.CardDao
 import com.example.kanjipractice.data.db.CardEntity
+import com.example.kanjipractice.domain.model.CardState
 import com.example.kanjipractice.domain.repository.CardRepository
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
@@ -13,9 +14,16 @@ class DefaultCardRepository @Inject constructor(
     private val cardDao: CardDao,
 ) : CardRepository {
 
-    override fun observeDue(now: LocalDateTime): Flow<List<CardEntity>> = cardDao.observeDue(now)
+    override fun observeDueReviews(now: LocalDateTime): Flow<List<CardEntity>> =
+        cardDao.observeDueReviews(now, NEW)
 
-    override fun observeDueCount(now: LocalDateTime): Flow<Int> = cardDao.observeDueCount(now)
+    override fun observeDueReviewCount(now: LocalDateTime): Flow<Int> =
+        cardDao.observeDueReviewCount(now, NEW)
+
+    override suspend fun nextNewCards(limit: Int): List<CardEntity> =
+        if (limit <= 0) emptyList() else cardDao.nextNewCards(limit, NEW)
+
+    override fun observeNewCount(): Flow<Int> = cardDao.observeNewCount(NEW)
 
     override fun observeTotalCount(): Flow<Int> = cardDao.observeTotalCount()
 
@@ -26,4 +34,9 @@ class DefaultCardRepository @Inject constructor(
     override suspend fun update(card: CardEntity) = cardDao.update(card)
 
     override suspend fun count(): Int = cardDao.count()
+
+    private companion object {
+        /** Matches CardState.NEW; pinned by a test so it cannot drift. */
+        val NEW = CardState.NEW.value
+    }
 }
