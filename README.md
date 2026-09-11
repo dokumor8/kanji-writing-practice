@@ -7,7 +7,8 @@ whether you got it. FSRS v6 schedules the reviews. Everything works offline once
 the recognition model has been downloaded once, and there are no ads.
 
 It is an implementation of `../planning/kanji_app.txt`, revised after a round of
-hands-on testing on a real phone (see "What changed in 1.1").
+hands-on testing on a real phone (see "What changed in 1.1" and "What changed
+in 1.2").
 
 ## The design in one paragraph
 
@@ -73,7 +74,8 @@ build-tools 34/35, both already installed). It is git-ignored, as usual.
 
 To install: `adb install -r app/build/outputs/apk/debug/app-debug.apk`. The debug
 APK is ~44 MB, almost all of it ML Kit's on-device recognition engine. The database
-schema did not change in 1.1, so installing over 1.0 keeps your existing progress.
+schema has not changed since 1.0, so installing over an earlier build keeps your
+existing progress.
 
 ## Project layout
 
@@ -93,6 +95,7 @@ schema did not change in 1.1, so installing over 1.0 keeps your existing progres
 | `tools/build_assets.py` | Regenerates `kanji.json` and the bundled SVGs from their upstream sources. |
 
 ## What changed in 1.1
+
 
 Driven by testing the 1.0 build on a phone.
 
@@ -135,11 +138,51 @@ Driven by testing the 1.0 build on a phone.
    and missing*, auto-checks on start and on resume, and only ever offers a
    download once a check has actually said the model is absent.
 
-8. **Recognition input tweaks** for the reported near-miss on 二: the writing area
-   is now declared to ML Kit via `RecognitionContext`/`WritingArea`, real touch
-   timestamps are passed through instead of a synthetic fixed interval, and the
-   canvas is a true square so the geometry the model sees is consistent across
-   devices.
+8. **The drawing canvas is a true square**, so the geometry the recogniser sees
+   is consistent across devices.
+
+## What changed in 1.2
+
+1.1 broke recognition on a real device: the deck screen reported the model as
+ready, but every Submit produced "Recognition is unavailable".
+
+1. **Reverted the `RecognitionContext`/`WritingArea` change.** 1.1 passed a
+   writing-area hint to `DigitalInkRecognizer.recognize(ink, context)`. That is
+   the documented way to give the model more to work with, but it is the only
+   difference between the working 1.0 call and the failing 1.1 one, so the plain
+   `recognize(ink)` overload is back. Real touch timestamps were reverted with
+   it, for the same reason: both were changes to a code path that worked, made
+   without any way to measure them. The square canvas stays — that one is only
+   about layout.
+
+2. **Recognition failures now say what went wrong.** The message used to be a
+   fixed string, which is not something a user (or a bug report) can act on. It
+   now carries the underlying exception message, truncated to one line, and the
+   full stack trace goes to logcat under the `ReviewViewModel` tag.
+
+3. **"Rate this card myself".** If the recogniser throws, the prompt offers a
+   self-grading path to the result screen. It is gated on the recogniser having
+   actually failed — enforced in the state machine, not just by which button is
+   rendered — so it cannot be used to skip drawing. Without it, a broken ML Kit
+   install makes the entire deck unusable.
+
+4. **"Reinstall" for the handwriting model.** ML Kit models live in app-private
+   storage, so a model that reports as present but does not work could previously
+   only be cleared by wiping the app and the review history with it. The deck
+   screen now offers a confirmed delete-and-redownload.
+
+### Recovering from a bad model install
+
+The downloaded model is inside the app's private data directory
+(`/data/data/com.example.kanjipractice/`), which is not browsable without root.
+In order of preference:
+
+* **Reinstall** on the deck screen — deletes and re-downloads the model, keeps
+  your review history.
+* `adb shell pm clear com.example.kanjipractice` — **wipes all progress too**.
+* To find the files: `adb shell run-as com.example.kanjipractice ls -R files`
+  (the app is debuggable).
+* For diagnosis: `adb logcat -s ReviewViewModel MlKitRecognition`.
 
 ## Where this deviates from the plan, and why
 
@@ -186,19 +229,22 @@ Everything in the plan is implemented, except where testing changed the design
 
 ## Tests
 
-123 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
+129 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
 
 * **FSRS (17)** — replays published reference vectors from the fsrs-rs
   implementation's own test suite, then asserts the invariants the algorithm is
   supposed to have: `R(S, S) = 90%`, higher ratings produce longer intervals, a
   lapse shrinks stability, reviewing late is rewarded, and every state stays
-  inside its legal range across a long simulated history.
-* **Review state machine (27)** — the daily new-card cap (including that a spent
+  inside its legal range across a long simulated history, and that the vendored
+  port still passes its own reference vectors.
+* **Review state machine (33)** — the daily new-card cap (including that a spent
   allowance produces no new cards, and that due reviews are never capped), drawing
   persistence across failed attempts, top-1 rejection of a second-rank match, the
   hint opening without committing anything and being reopenable, Again being
-  pre-selected after a hint but overridable, and undo restoring the card, the log
-  and the daily allowance.
+  pre-selected after a hint but overridable, undo restoring the card, the log and
+  the daily allowance, and the recognition-failure path (the error names its
+  cause, manual grading becomes available, and it is refused when the recogniser
+  has not actually failed).
 * **Deck screen (12)** — the regression test for the "nothing to review" bug (a
   deck seeded *after* the screen loads must be visible without a restart), the
   allowance arithmetic, and the settings stepper's clamps.
@@ -220,7 +266,7 @@ from `jamsinclair/open-anki-jlpt-decks` (MIT).
 
 There is no KVM in this environment and no emulator or system image installed, so
 the app cannot be launched here. What **is** verified is that it compiles,
-packages into a debug APK, and that all 123 unit tests pass. Untested at runtime:
+packages into a debug APK, and that all 129 unit tests pass. Untested at runtime:
 ML Kit model download and recognition accuracy on real handwriting (including
-whether the writing-area and timestamp changes actually help 二), Compose layout
-at real screen sizes, and Room persistence on device.
+whether recognition is working again on your device — that is the whole point of
+this build), Compose layout at real screen sizes, and Room persistence on device.

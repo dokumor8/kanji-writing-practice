@@ -125,6 +125,14 @@ class DeckListViewModel @Inject constructor(
         viewModelScope.launch { runCatching { recognitionService.prepare() } }
     }
 
+    /**
+     * Deletes the downloaded model and fetches it again. The recovery path when
+     * the model reports as present but recognition does not work.
+     */
+    fun reinstallModel() {
+        viewModelScope.launch { runCatching { recognitionService.reinstallModel() } }
+    }
+
     fun setDailyNewLimit(limit: Int) {
         val clamped = StudySettings.coerceDailyNewLimit(limit)
         viewModelScope.launch { settingsRepository.setDailyNewLimit(clamped) }

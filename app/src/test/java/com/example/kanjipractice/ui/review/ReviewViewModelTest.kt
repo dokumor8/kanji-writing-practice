@@ -484,6 +484,86 @@ class ReviewViewModelTest {
     }
 
     @Test
+    fun aRecognitionFailureSaysWhatWentWrong() {
+        // "Recognition is unavailable" on its own is not something a user can act
+        // on; the underlying cause has to reach the screen.
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.failure = IllegalStateException("Failed to run recognition")
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+
+        val state = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
+        assertTrue(state.recognitionFailed)
+        assertTrue(
+            state.message?.contains("Failed to run recognition") == true,
+            "message did not name the cause: ${state.message}",
+        )
+    }
+
+    @Test
+    fun theErrorMessageFallsBackWhenThereIsNoDetail() {
+        assertEquals(
+            "Recognition failed for an unknown reason.",
+            ReviewViewModel.recognitionErrorMessage(IllegalStateException()),
+        )
+    }
+
+    @Test
+    fun theErrorMessageIsTruncatedToOneLine() {
+        val message = ReviewViewModel.recognitionErrorMessage(
+            IllegalStateException("x".repeat(500) + "\nsecond line"),
+        )
+        assertTrue(message.length < 200)
+        assertFalse(message.contains('\n'))
+    }
+
+    @Test
+    fun theUserCanGradeThemselvesWhenRecognitionIsBroken() {
+        // Otherwise a broken ML Kit install makes the whole deck unusable.
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.failure = IllegalStateException("boom")
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.gradeManually()
+
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertEquals("\u65E5", state.card.character)
+        assertNull(state.recognized, "nothing was recognised")
+        assertNull(state.rating, "the user still has to choose a rating")
+
+        vm.rate(Rating.GOOD)
+        vm.next()
+        assertEquals(Rating.GOOD.value, logs.entries.single().rating)
+    }
+
+    @Test
+    fun manualGradingIsNotReachableWithoutARecognitionFailure() {
+        // It must not become a way to skip drawing: it is only offered on the
+        // prompt, and only after the recogniser has actually thrown.
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        val before = vm.uiState.value
+        vm.gradeManually()
+        assertEquals(before, vm.uiState.value)
+    }
+
+    @Test
+    fun aFollowingSuccessfulSubmitClearsTheFailureFlag() {
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.failure = IllegalStateException("boom")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        assertTrue(assertIs<ReviewUiState.Prompt>(vm.uiState.value).recognitionFailed)
+
+        recognition.failure = null
+        recognition.candidates = listOf("\u65E5")
+        vm.submit()
+
+        assertIs<ReviewUiState.Success>(vm.uiState.value)
+    }
+
+    @Test
     fun aModelDownloadIsStartedWhenTheSessionBegins() {
         viewModel(listOf(dueCard(1, "\u65E5")))
         assertTrue(recognition.prepareCount > 0)

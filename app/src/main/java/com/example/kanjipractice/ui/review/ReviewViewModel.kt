@@ -1,5 +1,6 @@
 package com.example.kanjipractice.ui.review
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.data.db.CardEntity
@@ -134,6 +135,7 @@ class ReviewViewModel @Inject constructor(
             hintCount = 0,
             hintVisible = false,
             message = null,
+            recognitionFailed = false,
             busy = false,
             remaining = remaining,
             canUndo = undoRecord != null,
@@ -183,7 +185,7 @@ class ReviewViewModel @Inject constructor(
             setPromptMessage(state, MESSAGE_EMPTY_DRAWING, clearAfterMillis = null)
             return
         }
-        _uiState.value = state.copy(busy = true, message = null)
+        _uiState.value = state.copy(busy = true, message = null, recognitionFailed = false)
 
         viewModelScope.launch {
             val candidates = try {
@@ -191,11 +193,16 @@ class ReviewViewModel @Inject constructor(
                 recognitionService.recognize(strokes)
             } catch (e: Exception) {
                 // An infrastructure failure is not a failed attempt: it must not
-                // count towards retryCount, and it must not fail the card.
-                setPromptMessage(
-                    _uiState.value as? ReviewUiState.Prompt ?: return@launch,
-                    MESSAGE_RECOGNITION_UNAVAILABLE,
-                    clearAfterMillis = null,
+                // count towards retryCount, and it must not fail the card. The
+                // real cause goes on screen and into logcat, because "recognition
+                // failed" on its own is not something anyone can act on.
+                Log.w(TAG, "Recognition failed for " + state.card.character, e)
+                val current = _uiState.value as? ReviewUiState.Prompt ?: return@launch
+                _uiState.value = current.copy(
+                    busy = false,
+                    strokes = strokes,
+                    message = recognitionErrorMessage(e),
+                    recognitionFailed = true,
                 )
                 return@launch
             }
@@ -222,6 +229,30 @@ class ReviewViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    /**
+     * Skips machine checking for this card and lets the user grade themselves.
+     *
+     * Only reachable after the recogniser has actually failed, so it cannot be
+     * used to dodge a drawing that was merely wrong. Without it, a broken ML Kit
+     * install leaves the user unable to finish any card at all.
+     */
+    fun gradeManually() {
+        val state = _uiState.value as? ReviewUiState.Prompt ?: return
+        // Enforced here, not just by which button happens to be on screen: this
+        // must never become a way to skip drawing a character.
+        if (!state.recognitionFailed) return
+        _uiState.value = ReviewUiState.Success(
+            card = state.card,
+            diagram = state.diagram,
+            recognized = null,
+            rating = null,
+            hintCount = hintCount,
+            retryCount = retryCount,
+            remaining = remaining,
+            canUndo = undoRecord != null,
+        )
     }
 
     /** Stores the rating on the success screen; Next is what commits it. */
@@ -324,10 +355,21 @@ class ReviewViewModel @Inject constructor(
     }
 
     companion object {
+        const val TAG = "ReviewViewModel"
         const val TRANSIENT_MESSAGE_MILLIS = 2_500L
         const val MESSAGE_NOT_QUITE = "Not quite - try again."
         const val MESSAGE_EMPTY_DRAWING = "Draw the character first."
-        const val MESSAGE_RECOGNITION_UNAVAILABLE =
-            "Recognition is unavailable. Check the model download and try again."
+
+        /** Builds an error line that says what actually went wrong. */
+        internal fun recognitionErrorMessage(error: Throwable): String {
+            val detail = error.message?.replace('\n', ' ')?.trim()?.take(MAX_ERROR_LENGTH)
+            return if (detail.isNullOrEmpty()) {
+                "Recognition failed for an unknown reason."
+            } else {
+                "Recognition failed: " + detail
+            }
+        }
+
+        private const val MAX_ERROR_LENGTH = 140
     }
 }

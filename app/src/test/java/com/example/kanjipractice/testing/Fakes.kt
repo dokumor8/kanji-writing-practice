@@ -129,6 +129,7 @@ class FakeRecognitionService : RecognitionService {
     var failure: Exception? = null
     var prepareCount = 0
     var refreshCount = 0
+    var reinstallCount = 0
 
     fun setModelState(value: ModelState) {
         state.value = value
@@ -141,6 +142,11 @@ class FakeRecognitionService : RecognitionService {
 
     override suspend fun prepare() {
         prepareCount++
+        failure?.let { throw it }
+    }
+
+    override suspend fun reinstallModel() {
+        reinstallCount++
         failure?.let { throw it }
     }
 

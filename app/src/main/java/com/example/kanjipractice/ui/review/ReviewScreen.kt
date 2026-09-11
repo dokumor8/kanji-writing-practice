@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -129,6 +130,14 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
         }
 
         MessageLine(state.message)
+
+        // A recogniser that is simply broken must not make the deck unusable.
+        if (state.recognitionFailed) {
+            TextButton(
+                onClick = viewModel::gradeManually,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text("Rate this card myself") }
+        }
 
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -256,6 +265,16 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
+        if (state.recognized == null) {
+            Text(
+                text = "Recognition was unavailable, so this card was not checked by " +
+                    "the recogniser. Rate it honestly.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -348,19 +367,20 @@ private fun RatingButton(
 // ---------------------------------------------------------------- shared bits
 
 /**
- * Reserves its line's height even when empty so the canvas does not resize and
- * the drawing does not appear to jump when a message appears.
+ * Reserves at least a line's height even when empty so the canvas does not resize
+ * and the drawing does not appear to jump when a message appears -- but grows for
+ * a long one, because a recognition error has to be readable to be actionable.
  */
 @Composable
 private fun MessageLine(message: String?) {
     Box(
-        Modifier.fillMaxWidth().height(28.dp),
+        Modifier.fillMaxWidth().heightIn(min = 28.dp).padding(horizontal = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (message != null) {
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center,
             )

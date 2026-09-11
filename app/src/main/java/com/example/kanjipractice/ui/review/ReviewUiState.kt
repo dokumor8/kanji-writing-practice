@@ -39,6 +39,13 @@ sealed interface ReviewUiState {
         val hintCount: Int,
         val hintVisible: Boolean,
         val message: String?,
+        /**
+         * True when the recogniser itself failed, as opposed to the drawing being
+         * wrong. That is the user's cue that the app is broken rather than they
+         * are, and it unlocks manual grading so a broken ML Kit install cannot
+         * make the deck unusable.
+         */
+        val recognitionFailed: Boolean,
         val busy: Boolean,
         val remaining: Int,
         override val canUndo: Boolean,

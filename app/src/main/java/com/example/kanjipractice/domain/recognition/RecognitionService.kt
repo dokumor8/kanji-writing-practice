@@ -51,6 +51,15 @@ interface RecognitionService {
     suspend fun prepare()
 
     /**
+     * Deletes the downloaded model and downloads it again.
+     *
+     * A model that is present but unusable is otherwise unrecoverable from inside
+     * the app: it lives in app-private storage that the user cannot reach without
+     * wiping the whole app (and their review history with it).
+     */
+    suspend fun reinstallModel()
+
+    /**
      * Recognises the drawn strokes and returns candidate characters, best first.
      * An empty list means nothing legible was drawn.
      */

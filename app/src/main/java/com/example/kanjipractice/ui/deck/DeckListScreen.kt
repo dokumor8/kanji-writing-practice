@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +23,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -120,7 +124,11 @@ fun DeckListScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        ModelStatusRow(state.modelState, onPrepare = viewModel::prepareModel)
+        ModelStatusRow(
+            state = state.modelState,
+            onPrepare = viewModel::prepareModel,
+            onReinstall = viewModel::reinstallModel,
+        )
 
         if (state.loading) {
             Spacer(Modifier.height(24.dp))
@@ -184,7 +192,35 @@ private fun DailyNewLimitRow(
  * one-off download and recognition is offline afterwards.
  */
 @Composable
-private fun ModelStatusRow(state: ModelState, onPrepare: () -> Unit) {
+private fun ModelStatusRow(
+    state: ModelState,
+    onPrepare: () -> Unit,
+    onReinstall: () -> Unit,
+) {
+    var confirmReinstall by remember { mutableStateOf(false) }
+    if (confirmReinstall) {
+        AlertDialog(
+            onDismissRequest = { confirmReinstall = false },
+            title = { Text("Reinstall the handwriting model?") },
+            text = {
+                Text(
+                    "The downloaded Japanese model is deleted and fetched again. " +
+                        "Recognition is unavailable until that finishes. Your review " +
+                        "history is not affected."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmReinstall = false
+                    onReinstall()
+                }) { Text("Reinstall") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmReinstall = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -220,7 +256,12 @@ private fun ModelStatusRow(state: ModelState, onPrepare: () -> Unit) {
                 ModelState.Unknown, ModelState.Checking, ModelState.Downloading ->
                     CircularProgressIndicator(Modifier.size(20.dp))
 
-                ModelState.Ready -> Unit
+                // A model that is present can still be broken, and it lives in
+                // app-private storage the user cannot reach; this is the only
+                // recovery that does not wipe their review history too.
+                ModelState.Ready -> TextButton(onClick = { confirmReinstall = true }) {
+                    Text("Reinstall")
+                }
 
                 ModelState.NotDownloaded -> OutlinedButton(onClick = onPrepare) {
                     Text("Download")

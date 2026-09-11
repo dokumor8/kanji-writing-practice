@@ -11,8 +11,6 @@ import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModel
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizer
 import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognizerOptions
 import com.google.mlkit.vision.digitalink.recognition.Ink
-import com.google.mlkit.vision.digitalink.recognition.RecognitionContext
-import com.google.mlkit.vision.digitalink.recognition.WritingArea
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -92,6 +90,34 @@ class MlKitRecognitionService @Inject constructor(
         }
     }
 
+    /**
+     * Throws the downloaded model away and fetches it again. The recovery path
+     * for a model that reports as present but does not work, which is otherwise
+     * only fixable by clearing the whole app's data.
+     */
+    override suspend fun reinstallModel() {
+        mutex.withLock {
+            try {
+                recognizer?.close()
+                recognizer = null
+                _modelState.value = ModelState.Checking
+                val model = buildModel()
+                val manager = RemoteModelManager.getInstance()
+                if (manager.isModelDownloaded(model).awaitResult()) {
+                    manager.deleteDownloadedModel(model).awaitResult()
+                }
+                _modelState.value = ModelState.Downloading
+                manager.download(model, DownloadConditions.Builder().build()).awaitResult()
+                recognizer = createRecognizer(model)
+                _modelState.value = ModelState.Ready
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not reinstall the Japanese digital-ink model", e)
+                _modelState.value = ModelState.Failed(e.message ?: e.javaClass.simpleName)
+                throw e
+            }
+        }
+    }
+
     override suspend fun recognize(strokes: List<Stroke>): List<String> {
         if (strokes.all { it.isEmpty }) return emptyList()
         if (recognizer == null) prepare()
@@ -100,21 +126,17 @@ class MlKitRecognitionService @Inject constructor(
         val ink = buildInk(StrokeNormalizer.normalize(strokes))
         if (ink.strokes.isEmpty()) return emptyList()
 
-        // Telling the model the size of the writing area it is looking at lets it
-        // calibrate stroke width and speed, which is the documented way to get
-        // better results from normalised ink.
-        val context = RecognitionContext.builder()
-            .setWritingArea(
-                WritingArea(
-                    StrokeNormalizer.DEFAULT_TARGET_SIZE,
-                    StrokeNormalizer.DEFAULT_TARGET_SIZE,
-                )
-            )
-            .build()
-
+        // The single-argument overload, deliberately.
+        //
+        // 1.1 briefly passed a RecognitionContext describing the writing area.
+        // That is the documented way to give the model more to work with, but it
+        // made recognition fail outright on a real device while this exact call
+        // had been working, so it was reverted. If it is ever revisited it must
+        // be measured on a device, not assumed.
+        //
         // ML Kit 19.x returns a RecognitionResult wrapper; older releases (and
         // the plan's sample code) handed back the candidate list directly.
-        return client.recognize(ink, context).awaitResult().candidates.map { it.text }
+        return client.recognize(ink).awaitResult().candidates.map { it.text }
     }
 
     private fun buildModel(): DigitalInkRecognitionModel {
@@ -129,24 +151,19 @@ class MlKitRecognitionService @Inject constructor(
     /**
      * Builds ML Kit ink from normalised strokes.
      *
-     * Real sample times are used where the canvas provided them, because the
-     * recogniser models stroke speed. Points with no timestamp (tests, synthetic
-     * ink) fall back to a plausible fixed sampling interval, and timestamps are
-     * forced to increase because that is what the API expects.
+     * Points carry evenly spaced timestamps. Passing the device's real uptime was
+     * tried and dropped: it is a change to a code path that works, for a benefit
+     * that could not be measured without a device.
      */
     private fun buildInk(strokes: List<Stroke>): Ink {
         val builder = Ink.builder()
-        var lastTimestamp = 0L
+        var time = 0L
         for (stroke in strokes) {
             if (stroke.isEmpty) continue
             val strokeBuilder = Ink.Stroke.builder()
             for (point in stroke.points) {
-                val timestamp = when {
-                    point.timestampMillis > lastTimestamp -> point.timestampMillis
-                    else -> lastTimestamp + FALLBACK_STEP_MILLIS
-                }
-                strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, timestamp))
-                lastTimestamp = timestamp
+                strokeBuilder.addPoint(Ink.Point.create(point.x, point.y, time))
+                time += TIME_STEP_MILLIS
             }
             builder.addStroke(strokeBuilder.build())
         }
@@ -159,7 +176,7 @@ class MlKitRecognitionService @Inject constructor(
         /** Japanese. The app is a kanji trainer, so this is the only model. */
         const val LANGUAGE_TAG = "ja"
 
-        /** Used only for points that arrived without a timestamp. */
-        const val FALLBACK_STEP_MILLIS = 10L
+        /** Simulated sampling interval between recorded points. */
+        const val TIME_STEP_MILLIS = 10L
     }
 }

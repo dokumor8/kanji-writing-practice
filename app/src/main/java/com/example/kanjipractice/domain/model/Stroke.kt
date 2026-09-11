@@ -1,17 +1,7 @@
 package com.example.kanjipractice.domain.model
 
-/**
- * A single sampled point of handwriting, in canvas pixels.
- *
- * [timestampMillis] is the device uptime at which the point was sampled. The
- * recogniser uses stroke timing, so synthetic timestamps are a real (if small)
- * loss of signal; it defaults to 0 for callers that have no clock, such as tests.
- */
-data class StrokePoint(
-    val x: Float,
-    val y: Float,
-    val timestampMillis: Long = 0L,
-)
+/** A single sampled point of handwriting, in canvas pixels. */
+data class StrokePoint(val x: Float, val y: Float)
 
 /**
  * One pen-down .. pen-up stroke.
