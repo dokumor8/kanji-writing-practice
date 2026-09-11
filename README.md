@@ -7,8 +7,7 @@ whether you got it. FSRS v6 schedules the reviews. Everything works offline once
 the recognition model has been downloaded once, and there are no ads.
 
 It is an implementation of `../planning/kanji_app.txt`, revised after a round of
-hands-on testing on a real phone (see "What changed in 1.1" and "What changed
-in 1.2").
+hands-on testing on a real phone (see "What changed in 1.1" through "1.3").
 
 ## The design in one paragraph
 
@@ -21,6 +20,9 @@ be drawn — a peek, not a reference to trace. The result screen then opens with
 **Again** selected, so peeking is honest about what it cost, but you can override
 it if you genuinely recalled the character after the glance.
 
+The result screen also shows **your drawing next to the target**, because seeing
+only the correct character is not enough to judge your own attempt.
+
 ## The review loop
 
 ```
@@ -31,25 +33,32 @@ it if you genuinely recalled the character after the glance.
           |                                          (drawing kept, retry counted)
           |  recognised (top-1 only)
           v
-        SUCCESS  (stroke diagram + Again / Hard / Good / Easy)
-          |  Next
+        SUCCESS  (your drawing + stroke diagram + a suggested rating)
+          |  Next            Again / Hard / Good / Easy, suggested as:
+          |                  Again after a hint, Hard after a retry, Good first time
           v
-        FSRS schedules the card, next card appears
+        FSRS schedules the card; next card appears
+          |
+          +-- Again --> the card is put back into THIS session's queue
 
         "I don't know"  ->  stroke-hint POPUP  ->  close  ->  draw
-                            (repeatable; a hint pre-selects Again on SUCCESS)
+                            (repeatable; a hint suggests Again on SUCCESS)
 
-        "Undo review" (top bar)  ->  the last committed review is taken back and
-                                     you are returned to its rating screen
+        "Undo review" (top bar)  ->  the last committed review is taken back,
+                                     including the queue copy a lapse appended
 ```
 
 ## Study limits
 
 New cards are **not** dumped in all at once. A session is built as:
 
-1. every card the scheduler says is due, then
+1. every card due before the **end of the current study day**, then
 2. never-seen cards, up to whatever is left of the **daily new-card allowance**
    (20/day by default, adjustable on the deck screen in steps of 5).
+
+A study day runs from **03:00 to 03:00**, so a session started at 00:30 still
+belongs to the previous day rather than starting a fresh one mid-sitting. Cards
+that become due later in the day are already waiting at breakfast.
 
 The allowance is derived from the review log rather than from a counter — it
 counts cards whose *first ever* review happened today — which means undoing a
@@ -184,6 +193,42 @@ In order of preference:
   (the app is debuggable).
 * For diagnosis: `adb logcat -s ReviewViewModel MlKitRecognition`.
 
+## What changed in 1.3
+
+1. **Next did nothing after a hint.** The suggested rating was painted on the
+   result screen from one field while `next()` read a second, private field that
+   only a button press ever set. The highlight was therefore cosmetic: the user
+   had to click the already-highlighted button before Next would respond. The
+   displayed rating is now the only rating, so Next works immediately whatever
+   suggested it.
+
+2. **The result screen suggests a rating.** It used to suggest Again after a hint
+   and nothing otherwise. Now: **Again** if the hint was opened, **Hard** if the
+   drawing took more than one attempt, **Good** if it was right first time.
+   **Easy is never suggested** — only the user can say a card was effortless. The
+   suggestion is always overridable, and manual grading (after a recogniser
+   failure) still suggests nothing, because nothing verified the drawing.
+
+3. **A study day is one queue.** Two changes that together mean "reviews for
+   today" are available in one sitting:
+   * A session gathers cards due before the **end of the current study day**, not
+     before the current instant, so a card due this evening is available in the
+     morning. The deck screen counts the same window, so its number is what a
+     session will actually contain.
+   * A lapse is due **immediately** rather than ten minutes later, and the session
+     re-appends it to its own queue. Failing a card sends it to the back of the
+     current sitting instead of parking it in the future; because the queue holds
+     the *updated* card, the next attempt starts from the memory state that lapse
+     produced. Undoing such a review removes the copy it appended.
+
+4. **The study day rolls over at 03:00, not midnight.** Studying at 00:30 is, to
+   the person doing it, still the previous day — previously it started a fresh day
+   of new cards and reset the daily allowance mid-session.
+
+5. **The result screen shows your drawing next to the target.** Seeing only the
+   correct character is not enough to judge your own attempt — and for the
+   "I drew the wrong character and it was accepted" case it is the whole point.
+
 ## Where this deviates from the plan, and why
 
 Everything in the plan is implemented, except where testing changed the design
@@ -229,7 +274,7 @@ Everything in the plan is implemented, except where testing changed the design
 
 ## Tests
 
-129 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
+140 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
 
 * **FSRS (17)** — replays published reference vectors from the fsrs-rs
   implementation's own test suite, then asserts the invariants the algorithm is
@@ -237,23 +282,24 @@ Everything in the plan is implemented, except where testing changed the design
   lapse shrinks stability, reviewing late is rewarded, and every state stays
   inside its legal range across a long simulated history, and that the vendored
   port still passes its own reference vectors.
-* **Review state machine (33)** — the daily new-card cap (including that a spent
+* **Review state machine (42)** — the daily new-card cap (including that a spent
   allowance produces no new cards, and that due reviews are never capped), drawing
   persistence across failed attempts, top-1 rejection of a second-rank match, the
-  hint opening without committing anything and being reopenable, Again being
-  pre-selected after a hint but overridable, undo restoring the card, the log and
-  the daily allowance, and the recognition-failure path (the error names its
-  cause, manual grading becomes available, and it is refused when the recogniser
-  has not actually failed).
+  hint opening without committing anything and being reopenable, Next committing
+  the suggested rating without a second click, the suggestion rules (Good / Hard /
+  Again, never Easy), a lapse returning to the same session and its copy being
+  removed on undo, the day-wide due window, undo restoring the card, the log and
+  the daily allowance, and the recognition-failure path.
 * **Deck screen (12)** — the regression test for the "nothing to review" bug (a
   deck seeded *after* the screen loads must be visible without a restart), the
   allowance arithmetic, and the settings stepper's clamps.
 * **Bundled data (13)** — parses every one of the 612 bundled SVGs and asserts
   each is well formed, has one stroke number per stroke, and belongs to a card;
   and validates the deck itself.
-* **Parsers, scheduling and settings (54)** — SVG path-data commands, KanjiVG
-  extraction, stroke normalisation, the FSRS-to-due-date policy (8), day
-  boundaries across time zones, and the settings arithmetic.
+* **Parsers, scheduling and settings (57)** — SVG path-data commands, KanjiVG
+  extraction, stroke normalisation, the FSRS-to-due-date policy (8, including that
+  a lapse is due immediately and a success is not), study-day boundaries across
+  time zones and the 03:00 rollover, and the settings arithmetic.
 
 ## Data sources and attribution
 
@@ -266,7 +312,7 @@ from `jamsinclair/open-anki-jlpt-decks` (MIT).
 
 There is no KVM in this environment and no emulator or system image installed, so
 the app cannot be launched here. What **is** verified is that it compiles,
-packages into a debug APK, and that all 129 unit tests pass. Untested at runtime:
+packages into a debug APK, and that all 140 unit tests pass. Untested at runtime:
 ML Kit model download and recognition accuracy on real handwriting (including
 whether recognition is working again on your device — that is the whole point of
 this build), Compose layout at real screen sizes, and Room persistence on device.

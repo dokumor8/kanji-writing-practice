@@ -51,6 +51,10 @@ class ReviewViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ReviewUiState>(ReviewUiState.Loading)
     val uiState: StateFlow<ReviewUiState> = _uiState.asStateFlow()
 
+    /**
+     * Mutable because a lapsed card is re-appended to the session rather than
+     * deferred by the clock: "Again" should come back later in this sitting.
+     */
     private var queue: List<CardEntity> = emptyList()
     private var position = 0
 
@@ -58,7 +62,6 @@ class ReviewViewModel @Inject constructor(
     private var strokes: List<Stroke> = emptyList()
     private var retryCount = 0
     private var hintCount = 0
-    private var userRating: Rating? = null
 
     private var messageJob: Job? = null
     private var undoRecord: UndoRecord? = null
@@ -77,6 +80,8 @@ class ReviewViewModel @Inject constructor(
         val stateBefore: ReviewUiState.Success,
         val hintCount: Int,
         val retryCount: Int,
+        /** True when this review appended a copy of the card to the queue. */
+        val requeued: Boolean,
     )
 
     init {
@@ -104,7 +109,10 @@ class ReviewViewModel @Inject constructor(
 
     private suspend fun buildQueue(): List<CardEntity> {
         val settings = currentStudySettings()
-        val dueReviews = cardRepository.observeDueReviews(LocalDateTime.now(clock)).first()
+        // Everything due today, not everything due this minute.
+        val dueReviews = cardRepository
+            .observeDueReviews(DayBoundary.endOfStudyDay(clock, zone))
+            .first()
         val newCards = cardRepository.nextNewCards(settings.remainingNewAllowance)
         return StudyQueueBuilder.build(dueReviews, newCards, settings.remainingNewAllowance)
     }
@@ -112,7 +120,7 @@ class ReviewViewModel @Inject constructor(
     private suspend fun currentStudySettings(): StudySettings {
         val limit = settingsRepository.observeDailyNewLimit().first()
         val introduced = reviewLogRepository
-            .observeIntroducedSince(DayBoundary.startOfToday(clock, zone))
+            .observeIntroducedSince(DayBoundary.startOfStudyDay(clock, zone))
             .first()
         return StudySettings(dailyNewLimit = limit, introducedToday = introduced)
     }
@@ -126,7 +134,6 @@ class ReviewViewModel @Inject constructor(
         strokes = emptyList()
         retryCount = 0
         hintCount = 0
-        userRating = null
         _uiState.value = ReviewUiState.Prompt(
             card = card,
             diagram = strokeDataService.diagramFor(card.character),
@@ -211,9 +218,9 @@ class ReviewViewModel @Inject constructor(
                 _uiState.value = ReviewUiState.Success(
                     card = state.card,
                     diagram = state.diagram,
+                    strokes = strokes,
                     recognized = RecognitionMatcher.bestCandidate(candidates),
-                    // A peek costs the card by default, but the user decides.
-                    rating = if (hintCount > 0) Rating.AGAIN else null,
+                    rating = defaultRating(),
                     hintCount = hintCount,
                     retryCount = retryCount,
                     remaining = remaining,
@@ -246,7 +253,10 @@ class ReviewViewModel @Inject constructor(
         _uiState.value = ReviewUiState.Success(
             card = state.card,
             diagram = state.diagram,
+            strokes = strokes,
             recognized = null,
+            // No default here: nothing verified the drawing, so the user has to
+            // make a deliberate choice rather than accept a suggestion.
             rating = null,
             hintCount = hintCount,
             retryCount = retryCount,
@@ -255,16 +265,38 @@ class ReviewViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Which rating the result screen opens with.
+     *
+     * The suggestion is the app's honest guess at how the recall went, and the
+     * user is always free to disagree:
+     *  - a peek at the hint means it was not recalled, so Again;
+     *  - needing more than one attempt is a shaky recall, so Hard;
+     *  - first time right is the ordinary good outcome, so Good.
+     * Easy is never suggested: only the user can say a card was effortless.
+     */
+    private fun defaultRating(): Rating = when {
+        hintCount > 0 -> Rating.AGAIN
+        retryCount > 0 -> Rating.HARD
+        else -> Rating.GOOD
+    }
+
     /** Stores the rating on the success screen; Next is what commits it. */
     fun rate(rating: Rating) {
         val state = _uiState.value as? ReviewUiState.Success ?: return
-        userRating = rating
         _uiState.value = state.copy(rating = rating)
     }
 
+    /**
+     * Commits the review that is currently displayed.
+     *
+     * The rating is read from the state rather than from a separate field: the
+     * suggested rating shown on screen *is* the answer, so Next works immediately
+     * whether the user picked it or the app did.
+     */
     fun next() {
         val state = _uiState.value as? ReviewUiState.Success ?: return
-        val rating = userRating ?: return
+        val rating = state.rating ?: return
         viewModelScope.launch { persistAndAdvance(state, rating) }
     }
 
@@ -280,6 +312,12 @@ class ReviewViewModel @Inject constructor(
         val record = undoRecord ?: return
         undoRecord = null
         viewModelScope.launch {
+            // If the review being taken back re-queued the card, the copy it
+            // appended has to go too, or re-rating it as Good would leave a card
+            // that is no longer due sitting in the queue.
+            if (record.requeued && queue.lastOrNull()?.id == record.cardBefore.id) {
+                queue = queue.dropLast(1)
+            }
             reviewLogRepository.delete(record.logId)
             cardRepository.update(record.cardBefore)
             position = record.cardIndex
@@ -298,7 +336,8 @@ class ReviewViewModel @Inject constructor(
             return
         }
         val now = LocalDateTime.now(clock)
-        cardRepository.update(scheduler.schedule(card, rating, now))
+        val updated = scheduler.schedule(card, rating, now)
+        cardRepository.update(updated)
         val logId = reviewLogRepository.log(
             cardId = card.id,
             rating = rating,
@@ -306,6 +345,12 @@ class ReviewViewModel @Inject constructor(
             retryCount = retryCount,
             reviewedAt = now,
         )
+        // A failed card goes back into this session's queue. The *updated* card is
+        // re-appended, not the snapshot, so the next review of it starts from the
+        // memory state this lapse produced.
+        val requeued = rating == Rating.AGAIN
+        if (requeued) queue = queue + updated
+
         undoRecord = UndoRecord(
             cardIndex = position,
             cardBefore = card,
@@ -313,6 +358,7 @@ class ReviewViewModel @Inject constructor(
             stateBefore = state,
             hintCount = hintCount,
             retryCount = retryCount,
+            requeued = requeued,
         )
         position++
         if (position >= queue.size) {

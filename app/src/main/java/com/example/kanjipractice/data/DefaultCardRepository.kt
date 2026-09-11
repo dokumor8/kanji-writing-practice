@@ -14,11 +14,11 @@ class DefaultCardRepository @Inject constructor(
     private val cardDao: CardDao,
 ) : CardRepository {
 
-    override fun observeDueReviews(now: LocalDateTime): Flow<List<CardEntity>> =
-        cardDao.observeDueReviews(now, NEW)
+    override fun observeDueReviews(before: LocalDateTime): Flow<List<CardEntity>> =
+        cardDao.observeDueReviews(before, NEW)
 
-    override fun observeDueReviewCount(now: LocalDateTime): Flow<Int> =
-        cardDao.observeDueReviewCount(now, NEW)
+    override fun observeDueReviewCount(before: LocalDateTime): Flow<Int> =
+        cardDao.observeDueReviewCount(before, NEW)
 
     override suspend fun nextNewCards(limit: Int): List<CardEntity> =
         if (limit <= 0) emptyList() else cardDao.nextNewCards(limit, NEW)

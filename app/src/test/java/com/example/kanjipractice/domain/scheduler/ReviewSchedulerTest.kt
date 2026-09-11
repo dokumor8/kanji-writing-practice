@@ -19,13 +19,16 @@ class ReviewSchedulerTest {
     private val scheduler = ReviewScheduler(Fsrs(), clock)
 
     @Test
-    fun aNewCardThatFailsGoesToLearningAndComesBackSoon() {
+    fun aLapsedCardIsDueImmediatelyRatherThanMinutesLater() {
+        // The session queue is what spaces a lapsed card, not the clock: a card
+        // failed at 09:00 must still be waiting if the user comes back at 09:01,
+        // rather than being hidden behind a ten-minute learning step.
         val updated = scheduler.schedule(newCard(), Rating.AGAIN, now)
 
         assertEquals(CardState.LEARNING, updated.state)
         assertEquals(1, updated.reps)
         assertEquals(1, updated.lapses)
-        assertEquals(now.plusMinutes(ReviewScheduler.RELEARNING_STEP_MINUTES), updated.due)
+        assertEquals(now, updated.due)
         assertEquals(now, updated.lastReview)
     }
 
@@ -99,8 +102,13 @@ class ReviewSchedulerTest {
         val base = newCard().copy(reps = 5, state = CardState.REVIEW, lastReview = now)
         for (rating in Rating.entries) {
             val updated = scheduler.schedule(base, rating, now)
-            assertTrue(updated.due.isAfter(now), "rating $rating produced a past due date")
+            assertTrue(
+                !updated.due.isBefore(now),
+                "rating $rating produced a past due date: ${updated.due}",
+            )
         }
+        // Only a lapse is due straight away; a success still gets a real interval.
+        assertTrue(scheduler.schedule(base, Rating.GOOD, now).due.isAfter(now))
     }
 
     @Test

@@ -20,9 +20,12 @@ import kotlin.math.roundToLong
  * interval becomes a due *date* is scheduler policy, and the two policies here
  * are worth calling out because they are not part of FSRS:
  *
- *  - a lapse ("Again") is not scheduled by interval. It is put through a short
- *    relearning step so the card comes back inside the same session, which is
- *    what makes the forced tracing step worth doing (plan, section 6.4).
+ *  - a lapse ("Again") is due **immediately**. It is not deferred by a wall-clock
+ *    learning step; the session queue is what decides when it comes back, by
+ *    re-appending it, so a failed card returns later in the same sitting rather
+ *    than ten minutes into the future. Because the queue covers the whole study
+ *    day (see DayBoundary), an abandoned session also still finds the card
+ *    waiting.
  *  - anything else gets at least a day, since a sub-day interval would just
  *    re-show the card immediately.
  */
@@ -50,7 +53,8 @@ class ReviewScheduler @Inject constructor(
 
         val updated = fsrs.review(previous, elapsedDays, rating)
         val due = when (rating) {
-            Rating.AGAIN -> now.plusMinutes(RELEARNING_STEP_MINUTES)
+            // Immediately due again: the session queue does the spacing.
+            Rating.AGAIN -> now
             else -> {
                 val days = fsrs.intervalDays(updated.stability)
                     .roundToLong()
@@ -83,9 +87,6 @@ class ReviewScheduler @Inject constructor(
     }
 
     companion object {
-        /** How soon a lapsed card comes back. */
-        const val RELEARNING_STEP_MINUTES = 10L
-
         const val MINIMUM_INTERVAL_DAYS = 1L
 
         private const val MILLIS_PER_DAY = 86_400_000.0

@@ -12,7 +12,11 @@ import java.time.LocalDateTime
 interface CardDao {
 
     /**
-     * Cards the scheduler says are due, most overdue first.
+     * Cards due before [before], most overdue first.
+     *
+     * `before` is the end of the current study day rather than the current
+     * instant, so everything due today is available in one sitting instead of
+     * trickling in by the clock.
      *
      * Cards that have never been reviewed ([newState]) are deliberately excluded:
      * they are not scheduled, they enter a session only through the daily
@@ -20,13 +24,13 @@ interface CardDao {
      * at once.
      */
     @Query(
-        "SELECT * FROM cards WHERE state <> :newState AND due <= :now " +
+        "SELECT * FROM cards WHERE state <> :newState AND due < :before " +
             "ORDER BY due ASC, id ASC"
     )
-    fun observeDueReviews(now: LocalDateTime, newState: Int): Flow<List<CardEntity>>
+    fun observeDueReviews(before: LocalDateTime, newState: Int): Flow<List<CardEntity>>
 
-    @Query("SELECT COUNT(*) FROM cards WHERE state <> :newState AND due <= :now")
-    fun observeDueReviewCount(now: LocalDateTime, newState: Int): Flow<Int>
+    @Query("SELECT COUNT(*) FROM cards WHERE state <> :newState AND due < :before")
+    fun observeDueReviewCount(before: LocalDateTime, newState: Int): Flow<Int>
 
     /** Never-reviewed cards, in deck order: easier JLPT levels first. */
     @Query("SELECT * FROM cards WHERE state = :newState ORDER BY jlpt DESC, id ASC LIMIT :limit")

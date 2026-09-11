@@ -35,13 +35,13 @@ class FakeCardRepository(cards: List<CardEntity> = emptyList()) : CardRepository
 
     private fun isNew(card: CardEntity) = card.state == CardState.NEW
 
-    override fun observeDueReviews(now: LocalDateTime): Flow<List<CardEntity>> =
+    override fun observeDueReviews(before: LocalDateTime): Flow<List<CardEntity>> =
         cards.map { list ->
-            list.filter { !isNew(it) && !it.due.isAfter(now) }.sortedBy { it.due }
+            list.filter { !isNew(it) && it.due.isBefore(before) }.sortedBy { it.due }
         }
 
-    override fun observeDueReviewCount(now: LocalDateTime): Flow<Int> =
-        cards.map { list -> list.count { !isNew(it) && !it.due.isAfter(now) } }
+    override fun observeDueReviewCount(before: LocalDateTime): Flow<Int> =
+        cards.map { list -> list.count { !isNew(it) && it.due.isBefore(before) } }
 
     override suspend fun nextNewCards(limit: Int): List<CardEntity> =
         cards.value

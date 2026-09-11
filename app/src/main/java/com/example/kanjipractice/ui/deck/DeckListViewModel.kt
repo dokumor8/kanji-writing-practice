@@ -56,18 +56,22 @@ class DeckListViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * "Due" is a function of the current time, so the queries are re-run whenever
-     * [refresh] moves this forward. Without that the deck screen kept the counts
-     * it computed at construction and cards seeded a moment later were invisible
-     * until the app was restarted.
+     * The counts are a function of the study day, so the queries are re-run
+     * whenever [refresh] ticks this forward. Without that the deck screen kept the
+     * counts it computed at construction: cards seeded a moment later were
+     * invisible until the app was restarted, and the daily allowance never reset.
      */
     private val now = MutableStateFlow(LocalDateTime.now(clock))
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val counts = combine(
-        now.flatMapLatest { cardRepository.observeDueReviewCount(it) },
+        // "Due" means due before the end of today's study day, so the number on
+        // this screen is what a session will actually contain.
         now.flatMapLatest {
-            reviewLogRepository.observeIntroducedSince(DayBoundary.startOfToday(clock, zone))
+            cardRepository.observeDueReviewCount(DayBoundary.endOfStudyDay(clock, zone))
+        },
+        now.flatMapLatest {
+            reviewLogRepository.observeIntroducedSince(DayBoundary.startOfStudyDay(clock, zone))
         },
         cardRepository.observeNewCount(),
         cardRepository.observeTotalCount(),

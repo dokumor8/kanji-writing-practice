@@ -146,7 +146,7 @@ class ReviewViewModelTest {
         recognition = FakeRecognitionService()
         // Pretend two cards were already introduced today.
         runTest {
-            val today = DayBoundary.startOfToday(clock, zone)
+            val today = DayBoundary.startOfStudyDay(clock, zone)
             logs.log(1L, Rating.GOOD, false, 0, today.plusHours(1))
             logs.log(2L, Rating.GOOD, false, 0, today.plusHours(2))
         }
@@ -218,7 +218,12 @@ class ReviewViewModelTest {
 
         val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
         assertEquals("\u65E5", state.recognized)
-        assertNull(state.rating, "no rating is preselected without a hint")
+        assertEquals(
+            Rating.GOOD,
+            state.rating,
+            "a first-try correct drawing suggests Good",
+        )
+        assertEquals(1, state.strokes.size, "the drawing is carried over for self-check")
     }
 
     @Test
@@ -333,16 +338,80 @@ class ReviewViewModelTest {
     }
 
     @Test
-    fun nextDoesNothingUntilARatingIsChosen() {
+    fun nextCommitsTheSuggestedRatingWithoutTheUserClickingIt() {
+        // Regression: the suggested rating used to be painted on screen from one
+        // field while next() read another, so Next silently did nothing until the
+        // user clicked the button that was already highlighted.
         val vm = viewModel(listOf(newCard(1, "\u65E5")))
         recognition.candidates = listOf("\u65E5")
         vm.onStrokeFinished(stroke())
         vm.submit()
 
         vm.next()
-        assertIs<ReviewUiState.Success>(vm.uiState.value)
-        assertTrue(cards.updates.isEmpty())
-        assertTrue(logs.entries.isEmpty())
+
+        assertEquals(1, logs.entries.size, "Next must commit without a second click")
+        assertEquals(Rating.GOOD.value, logs.entries.single().rating)
+    }
+
+    @Test
+    fun nextAlsoWorksStraightAfterAHint() {
+        // The exact sequence reported: hint, draw, see Again highlighted, press Next.
+        val vm = viewModel(listOf(newCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u65E5")
+
+        vm.showHint()
+        vm.dismissHint()
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        assertEquals(Rating.AGAIN, assertIs<ReviewUiState.Success>(vm.uiState.value).rating)
+
+        vm.next()
+
+        assertEquals(1, logs.entries.size)
+        assertEquals(Rating.AGAIN.value, logs.entries.single().rating)
+        assertTrue(logs.entries.single().usedIDontKnow)
+    }
+
+    @Test
+    fun aDrawingThatNeededRetriesSuggestsHard() {
+        val vm = viewModel(listOf(newCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u6708")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+
+        recognition.candidates = listOf("\u65E5")
+        vm.submit()
+
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertEquals(Rating.HARD, state.rating)
+        assertEquals(1, state.retryCount)
+    }
+
+    @Test
+    fun easyIsNeverSuggested() {
+        // Only the user can say a card was effortless.
+        val vm = viewModel(listOf(newCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u65E5")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        assertEquals(Rating.GOOD, assertIs<ReviewUiState.Success>(vm.uiState.value).rating)
+
+        vm.rate(Rating.EASY)
+        assertEquals(Rating.EASY, assertIs<ReviewUiState.Success>(vm.uiState.value).rating)
+    }
+
+    @Test
+    fun manualGradingLeavesTheChoiceToTheUser() {
+        val vm = viewModel(listOf(newCard(1, "\u65E5")))
+        recognition.failure = IllegalStateException("boom")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.gradeManually()
+
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertNull(state.rating, "nothing verified the drawing, so nothing is suggested")
+        vm.next()
+        assertTrue(logs.entries.isEmpty(), "Next does nothing until a rating is chosen")
     }
 
     @Test
@@ -428,7 +497,7 @@ class ReviewViewModelTest {
         vm.rate(Rating.GOOD)
         vm.next()
 
-        val today = DayBoundary.startOfToday(clock, zone)
+        val today = DayBoundary.startOfStudyDay(clock, zone)
         assertEquals(1, logs.observeIntroducedSince(today).first())
 
         vm.undoLastReview()
@@ -464,6 +533,83 @@ class ReviewViewModelTest {
 
         vm.undoLastReview()
         assertIs<ReviewUiState.Success>(vm.uiState.value)
+    }
+
+    // -------------------------------------------------------- day-wide queueing
+
+    @Test
+    fun cardsDueLaterTodayAreAlreadyInTheQueue() {
+        // A session covers the whole study day rather than the current instant, so
+        // a card that becomes due this evening is available in the morning.
+        val laterToday = dueCard(1, "\u65E5").copy(due = now.plusHours(8))
+        val vm = viewModel(listOf(laterToday))
+        assertEquals(1, assertIs<ReviewUiState.Prompt>(vm.uiState.value).remaining)
+    }
+
+    @Test
+    fun cardsDueAfterTheEndOfTheStudyDayAreNot() {
+        val tomorrowEvening = dueCard(1, "\u65E5").copy(due = now.plusHours(30))
+        val vm = viewModel(listOf(tomorrowEvening))
+        assertIs<ReviewUiState.SessionComplete>(vm.uiState.value)
+    }
+
+    @Test
+    fun aLapsedCardComesBackInTheSameSessionInsteadOfTenMinutesLater() {
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u65E5")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.rate(Rating.AGAIN)
+        vm.next()
+
+        // The session does not end and the card is waiting, rather than being
+        // parked ten minutes into the future.
+        val state = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
+        assertEquals("\u65E5", state.card.character)
+        assertEquals(1, state.remaining)
+        assertEquals(0, state.retryCount, "the second run at the card starts clean")
+    }
+
+    @Test
+    fun theSecondRunAtALapsedCardSuggestsGoodAgain() {
+        // Matches the reported sequence: fail it, then get it right straight away.
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u65E5")
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.rate(Rating.AGAIN)
+        vm.next()
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertEquals(Rating.GOOD, state.rating)
+        assertEquals("\u65E5", state.recognized)
+    }
+
+    @Test
+    fun undoingALapseRemovesTheCopyItPutBackInTheQueue() {
+        val vm = viewModel(listOf(dueCard(1, "\u65E5"), dueCard(2, "\u6708")))
+        recognition.candidates = listOf("\u65E5")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.rate(Rating.AGAIN)
+        vm.next()
+        assertEquals("\u6708", assertIs<ReviewUiState.Prompt>(vm.uiState.value).card.character)
+
+        vm.undoLastReview()
+        assertIs<ReviewUiState.Success>(vm.uiState.value)
+
+        // Re-rated as Good, the card is scheduled days out, so the copy the lapse
+        // appended must not come round again.
+        vm.rate(Rating.GOOD)
+        vm.next()
+
+        val prompt = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
+        assertEquals("\u6708", prompt.card.character)
+        assertEquals(1, prompt.remaining, "the re-queued copy must not linger")
     }
 
     // ------------------------------------------------------------ error paths

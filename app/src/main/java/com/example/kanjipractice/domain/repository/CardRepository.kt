@@ -6,10 +6,15 @@ import java.time.LocalDateTime
 
 interface CardRepository {
 
-    /** Scheduled cards that are due. Never-reviewed cards are not included. */
-    fun observeDueReviews(now: LocalDateTime): Flow<List<CardEntity>>
+    /**
+     * Scheduled cards due before [before]. Never-reviewed cards are not included.
+     *
+     * Callers pass the end of the current study day, not the current instant: see
+     * DayBoundary.
+     */
+    fun observeDueReviews(before: LocalDateTime): Flow<List<CardEntity>>
 
-    fun observeDueReviewCount(now: LocalDateTime): Flow<Int>
+    fun observeDueReviewCount(before: LocalDateTime): Flow<Int>
 
     /** The next [limit] never-reviewed cards in deck order. */
     suspend fun nextNewCards(limit: Int): List<CardEntity>

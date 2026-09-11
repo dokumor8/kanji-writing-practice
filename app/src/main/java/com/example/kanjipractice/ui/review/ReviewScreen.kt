@@ -1,5 +1,6 @@
 package com.example.kanjipractice.ui.review
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,6 +47,7 @@ import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.deck.DeckJsonParser
 import com.example.fsrs.Rating
 import com.example.kanjipractice.ui.components.DrawingCanvas
+import com.example.kanjipractice.ui.components.DrawingPreview
 import com.example.kanjipractice.ui.components.StrokeHintDialog
 import com.example.kanjipractice.ui.components.StrokeOrderView
 
@@ -244,11 +247,31 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
         Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = state.card.character,
-            fontSize = 44.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
+        // The target and what the user actually drew, side by side: seeing only
+        // the correct character is not enough to judge your own attempt, and for
+        // the "I drew a wrong character that was accepted" case it is the whole
+        // point.
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            ComparisonPane(label = "Target", modifier = Modifier.weight(1f)) {
+                Text(
+                    text = state.card.character,
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            ComparisonPane(label = "You drew", modifier = Modifier.weight(1f)) {
+                DrawingPreview(
+                    strokes = state.strokes,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         Text(text = state.card.meaning, style = MaterialTheme.typography.titleMedium)
         if (state.retryCount > 0) {
             Text(
@@ -343,6 +366,30 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** One square of the target-versus-drawing comparison. */
+@Composable
+private fun ComparisonPane(
+    label: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box(
+            Modifier
+                .padding(top = 4.dp)
+                .size(104.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center,
+        ) { content() }
     }
 }
 

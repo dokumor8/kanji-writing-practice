@@ -59,6 +59,8 @@ sealed interface ReviewUiState {
     data class Success(
         val card: CardEntity,
         val diagram: StrokeDiagram,
+        /** What the user actually drew, shown beside the target for self-check. */
+        val strokes: List<Stroke>,
         val recognized: String?,
         val rating: Rating?,
         val hintCount: Int,
