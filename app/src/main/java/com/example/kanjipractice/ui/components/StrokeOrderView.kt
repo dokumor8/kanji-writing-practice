@@ -4,10 +4,15 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -80,7 +85,8 @@ fun StrokeOrderView(
         )
     }
 
-    Canvas(modifier) {
+    Box(modifier) {
+    Canvas(Modifier.fillMaxSize()) {
         if (strokeCount == 0) {
             drawFallbackCharacter(textMeasurer, character, strokeColor)
             return@Canvas
@@ -124,6 +130,19 @@ fun StrokeOrderView(
                     ),
                 )
             }
+        }
+    }
+
+        // Saying so out loud. The old fallback drew the character in a system
+        // font and said nothing, which is indistinguishable from a design choice
+        // -- it hid a total failure to load the stroke data for a whole app.
+        if (strokeCount == 0) {
+            Text(
+                text = "No stroke diagram",
+                style = MaterialTheme.typography.labelSmall,
+                color = guideColor,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+            )
         }
     }
 }

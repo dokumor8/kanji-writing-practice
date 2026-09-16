@@ -24,7 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import com.example.kanjipractice.BuildConfig
+import com.example.kanjipractice.R
 import com.example.kanjipractice.domain.AppScript
 
 /**
@@ -59,7 +61,7 @@ fun LicencesScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
-                text = "Kanji Practice " + BuildConfig.VERSION_NAME,
+                text = stringResource(R.string.app_name) + " " + BuildConfig.VERSION_NAME,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
