@@ -81,9 +81,9 @@ def load_medians(characters):
     return medians
 
 
-def smooth(median, top):
-    """Median polyline -> a smooth cubic path, with the y axis flipped."""
-    pts = [(x, top - y) for x, y in median]
+def smooth(median_pts):
+    """Median polyline, already flipped and shifted, -> a smooth cubic path."""
+    pts = median_pts
     if len(pts) < 2:
         x, y = pts[0]
         return f'M {x:.0f} {y:.0f} L {x + 1:.0f} {y:.0f}'
@@ -102,23 +102,21 @@ def smooth(median, top):
     return d
 
 
-def write_svg(path, character, medians, box):
+def write_svg(path, character, flipped, box):
     """Same element layout the KanjiVG parser reads: paths, then stroke numbers."""
-    top = box['top']
     parts = [f'<?xml version="1.0" encoding="UTF-8"?>',
              f'<!-- Generated from Make Me a Hanzi stroke medians. See ARPHICPL.TXT. -->',
              f'<svg xmlns="http://www.w3.org/2000/svg" '
-             f'viewBox="{box["min_x"]:.0f} {box["min_y"]:.0f} '
-             f'{box["width"]:.0f} {box["height"]:.0f}">',
+             f'viewBox="0 0 {box["width"]:.0f} {box["height"]:.0f}">',
              f'<g id="StrokePaths_{ord(character):05x}">']
-    for i, median in enumerate(medians):
-        parts.append(f'  <path d="{smooth(median, top)}"/>')
+    for median in flipped:
+        parts.append(f'  <path d="{smooth(median)}"/>')
     parts.append('</g>')
     parts.append(f'<g id="StrokeNumbers_{ord(character):05x}">')
-    for i, median in enumerate(medians, start=1):
-        x, y = median[0][0], top - median[0][1]
-        nx = min(max(x + 18, box['min_x'] + 20), box['min_x'] + box['width'] - 40)
-        ny = min(max(y - 30, box['min_y'] + 40), box['min_y'] + box['height'] - 20)
+    for i, median in enumerate(flipped, start=1):
+        x, y = median[0]
+        nx = min(max(x + 18, 20), box['width'] - 40)
+        ny = min(max(y - 30, 40), box['height'] - 20)
         parts.append(f'  <text transform="matrix(1 0 0 1 {nx:.1f} {ny:.1f})">{i}</text>')
     parts.append('</g>')
     parts.append('</svg>')
@@ -151,12 +149,23 @@ def main():
     ordered = sorted(usable, key=lambda c: (level_of[c], freq_of.get(c, 10 ** 9), c))
 
     # One fixed view box for every character, so relative proportions are kept.
+    # Make Me a Hanzi works in a font box with y increasing upward; SVG has y
+    # increasing downward. Flip here, and normalise the origin to (0, 0), which
+    # is what the renderer assumes and what KanjiVG already does.
     xs = [x for c in ordered for m in medians[c] for x, _ in m]
     ys = [y for c in ordered for m in medians[c] for _, y in m]
     pad = 40
-    box = {'min_x': min(xs) - pad, 'min_y': 0, 'top': max(ys) + pad}
-    box['width'] = max(xs) + pad - box['min_x']
-    box['height'] = box['top'] - box['min_y']
+    top = max(ys) + pad
+    left = min(xs) - pad
+    flipped = {
+        c: [[(x - left, top - y) for x, y in median] for median in medians[c]]
+        for c in ordered
+    }
+    points = [p for c in ordered for median in flipped[c] for p in median]
+    box = {
+        'width': max(p[0] for p in points),
+        'height': max(p[1] for p in points),
+    }
 
     strokes_dir = os.path.join(OUT, 'strokes')
     os.makedirs(strokes_dir, exist_ok=True)
@@ -177,7 +186,7 @@ def main():
             'deck': 'hsk-%d' % level_of[ch],
             'sortKey': index,
         })
-        write_svg(os.path.join(strokes_dir, '%05x.svg' % ord(ch)), ch, medians[ch], box)
+        write_svg(os.path.join(strokes_dir, '%05x.svg' % ord(ch)), ch, flipped[ch], box)
 
     json.dump(cards, open(os.path.join(OUT, 'hanzi.json'), 'w', encoding='utf-8'),
               ensure_ascii=False, indent=1)
@@ -192,7 +201,7 @@ def main():
     print('sets:', dict(sorted(collections.Counter(c['deck'] for c in cards).items())))
     print('with example word:', sum(1 for c in cards if c['exampleWord']))
     print('dropped (no definition):', len(ordered) - len(cards))
-    print('viewBox: %.0f %.0f %.0f %.0f' % (box['min_x'], box['min_y'], box['width'], box['height']))
+    print('viewBox: 0 0 %.0f %.0f' % (box['width'], box['height']))
     print('sample:', json.dumps(cards[:2], ensure_ascii=False))
 
 

@@ -34,7 +34,7 @@ class StrokeDataService @Inject constructor(
     }
 
     private suspend fun load(character: String): StrokeDiagram = withContext(Dispatchers.IO) {
-        val path = assetPath(character) ?: return@withContext StrokeDiagram.EMPTY
+        val path = StrokeAssets.pathFor(character) ?: return@withContext StrokeDiagram.EMPTY
         val svg = try {
             context.assets.open(path).bufferedReader().use { it.readText() }
         } catch (e: IOException) {
@@ -48,10 +48,6 @@ class StrokeDataService @Inject constructor(
         }
     }
 
-    /** KanjiVG names each file after the zero-padded Unicode code point. */
-    fun assetPath(character: String): String? {
-        if (character.isEmpty()) return null
-        val codePoint = character.codePointAt(0)
-        return "kanjivg/" + codePoint.toString(16).padStart(5, '0') + ".svg"
-    }
+    /** Each file is named after the zero-padded Unicode code point. */
+    fun assetPath(character: String): String? = StrokeAssets.pathFor(character)
 }

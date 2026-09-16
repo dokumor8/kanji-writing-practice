@@ -58,6 +58,19 @@ class JapaneseStrokeDataTest {
         assertTrue(failures.isEmpty(), "malformed diagrams: ${failures.take(10)}")
     }
 
+
+    @Test
+    fun everyCardResolvesToABundledDiagram() {
+        // Regression: the loader hard-coded one flavour's asset directory, so
+        // every Chinese character silently fell back to being drawn in a system
+        // font. This walks the path the app actually builds.
+        val missing = cards.mapNotNull { card ->
+            val path = StrokeAssets.pathFor(card.character) ?: return@mapNotNull card.character
+            if (File(assetsDir, path).exists()) null else "${card.character} -> $path"
+        }
+        assertTrue(missing.isEmpty(), "cards whose asset path does not exist: ${missing.take(10)}")
+    }
+
     @Test
     fun everyCardHasAStrokeDiagram() {
         val present = kanjivgDir.listFiles { f -> f.extension == "svg" }
