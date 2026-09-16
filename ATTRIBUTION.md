@@ -48,15 +48,53 @@ specification and the reference implementation at
 The port itself is original Kotlin code; the published default parameters and the
 numeric test vectors come from that reference implementation.
 
-## ML Kit Digital Ink Recognition
+## ML Kit Digital Ink Recognition and Google Play Services
 
-Provided by Google as a normal Gradle dependency
-(`com.google.mlkit:digital-ink-recognition:19.0.0`); its own terms apply to the
-downloaded Japanese recognition model.
+Proprietary, provided by Google as ordinary Gradle dependencies and **not**
+redistributed here. The relevant terms are the
+[ML Kit Terms of Service](https://developers.google.com/ml-kit/terms), which
+incorporate the [Google APIs Terms of Service](https://developers.google.com/terms),
+and the [Android Software Development Kit License](https://developer.android.com/studio/terms).
+
+Two consequences worth knowing:
+
+* The Japanese recognition model is downloaded from Google on first use. It is
+  "related software" under the ML Kit terms, which forbid reverse engineering or
+  extracting it, so it can be neither bundled with the app nor self-hosted.
+  Offline use after the first download is the intended design; independence from
+  Google's servers is not available within ML Kit.
+* ML Kit sends Google metrics about the performance and utilisation of the API in
+  the app, and the terms make the app's publisher responsible for telling users
+  about it. Handwriting itself never leaves the device.
+
+Because ML Kit depends on Google Play Services, this app cannot be distributed
+through the main F-Droid repository; see the README.
+
+## Bundled software
+
+Built against 119 resolved runtime artifacts. The overwhelming majority are
+Apache-2.0:
+
+| Component | Licence |
+| --- | --- |
+| AndroidX (Compose, Activity, Lifecycle, Navigation, Room, DataStore, …) | Apache License 2.0 |
+| Kotlin standard library, kotlinx.coroutines | Apache License 2.0 |
+| Dagger/Hilt | Apache License 2.0 |
+| OkHttp, Guava `listenablefuture`, `javax.inject` | Apache License 2.0 |
+| Google Play Services (base, basement, tasks) | Android Software Development Kit License |
+| ML Kit (common, digital-ink-common, digital-ink-recognition) | ML Kit Terms of Service |
+| Firebase annotations/components, Google data transport | Apache License 2.0 |
+
+Three artifacts declare no licence in their POMs — `com.google.guava:listenablefuture:1.0`,
+`com.squareup.okhttp3:okhttp:3.12.1` and `javax.inject:javax.inject:1` — but all
+three are Apache-2.0 upstream.
+
+Attribution for all of the above is shown in the app, under Settings → Licences.
 
 ## Regenerating the bundled data
 
-`tools/build_assets.py` rebuilds `kanji.json` and the bundled SVGs from the three
-sources above. It expects them fetched into a working directory as
-`kanji-data.json`, `n5.csv`/`n4.csv`/`n3.csv` and `kanjivg-master/kanji/`, and
-takes the assets directory as its only argument.
+`tools/build_assets.py` rebuilds `kanji.json`, `kana.json` and the bundled SVGs
+from the sources above. It expects them fetched into a working directory as
+`kanji-data.json`, `n5.csv` through `n1.csv`, and `kanjivg-master/kanji/`; point
+`KANJI_SOURCES` at that directory and pass the assets directory as the only
+argument.

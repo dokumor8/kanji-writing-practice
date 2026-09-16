@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.kanjipractice.ui.browse.BrowseScreen
 import com.example.kanjipractice.ui.deck.DeckListScreen
+import com.example.kanjipractice.ui.licences.LicencesScreen
 import com.example.kanjipractice.ui.review.ReviewScreen
 import com.example.kanjipractice.ui.settings.SettingsScreen
 
@@ -15,6 +16,7 @@ private object Routes {
     const val REVIEW = "review"
     const val BROWSE = "browse"
     const val SETTINGS = "settings"
+    const val LICENCES = "licences"
 }
 
 @Composable
@@ -36,7 +38,13 @@ fun KanjiPracticeApp(navController: NavHostController = rememberNavController())
             BrowseScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLicences = { navController.navigate(Routes.LICENCES) },
+            )
+        }
+        composable(Routes.LICENCES) {
+            LicencesScreen(onBack = { navController.popBackStack() })
         }
     }
 }

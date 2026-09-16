@@ -2,6 +2,7 @@ package com.example.kanjipractice.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +48,7 @@ import com.example.kanjipractice.domain.settings.StudySettings
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onLicences: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -96,6 +98,11 @@ fun SettingsScreen(
                 onPrepare = viewModel::prepareModel,
                 onReinstall = viewModel::reinstallModel,
             )
+
+            SectionHeader("About")
+            TextButton(onClick = onLicences, contentPadding = PaddingValues(0.dp)) {
+                Text("Licences and attribution")
+            }
 
             Spacer(Modifier.height(16.dp))
             Text(

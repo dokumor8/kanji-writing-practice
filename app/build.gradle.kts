@@ -82,6 +82,8 @@ android {
 
     buildFeatures {
         compose = true
+        // The licences screen shows the app version.
+        buildConfig = true
     }
 
     testOptions {
