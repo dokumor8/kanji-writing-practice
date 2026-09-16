@@ -48,6 +48,31 @@ specification and the reference implementation at
 The port itself is original Kotlin code; the published default parameters and the
 numeric test vectors come from that reference implementation.
 
+## Chinese character data
+
+Three sources, all shipped in the `chinese` flavour.
+
+**Stroke order** — `app/src/chinese/assets/strokes/*.svg` are generated from
+[Make Me a Hanzi](https://github.com/skishore/makemeahanzi), whose stroke graphics
+derive from the **Arphic PL KaitiM GB** and **Arphic PL UKai** fonts, © 1999
+Arphic Technology Co., Ltd., under the
+[Arphic Public License](https://github.com/skishore/makemeahanzi/blob/master/APL/english/ARPHICPL.TXT).
+The APL requires its licence text to travel unaltered with any copy of the data,
+so it is bundled at `app/src/chinese/assets/ARPHICPL.TXT` and checked by a test.
+This data is *modified*: the published stroke medians have been converted to SVG
+paths, which the APL permits provided the conversion is noted — see
+`tools/build_assets_chinese.py`.
+
+The APL's mere-aggregation clause means this does not reach the application code
+around it.
+
+**Meanings and pinyin** — derived from **Unihan**, © Unicode, Inc., under the
+[Unicode License v3](https://www.unicode.org/license.txt), which is permissive.
+
+**HSK levels and word frequencies** — from
+[complete-hsk-vocabulary](https://github.com/drkameleon/complete-hsk-vocabulary),
+MIT, © 2026 Yanis Zafirópulos.
+
 ## ML Kit Digital Ink Recognition and Google Play Services
 
 Proprietary, provided by Google as ordinary Gradle dependencies and **not**
@@ -94,7 +119,12 @@ Attribution for all of the above is shown in the app, under Settings → Licence
 ## Regenerating the bundled data
 
 `tools/build_assets.py` rebuilds `kanji.json`, `kana.json` and the bundled SVGs
-from the sources above. It expects them fetched into a working directory as
-`kanji-data.json`, `n5.csv` through `n1.csv`, and `kanjivg-master/kanji/`; point
-`KANJI_SOURCES` at that directory and pass the assets directory as the only
-argument.
+for the Japanese sets. It expects them fetched into a working directory as
+`kanji-data.json`, `n5.csv` through `n1.csv`, and `kanjivg-master/kanji/`.
+
+`tools/build_assets_chinese.py` rebuilds `hanzi.json`, the stroke SVGs and
+`ARPHICPL.TXT` for the Chinese sets. It expects `hsk.json`, `Unihan.zip`
+(unpacked to `unihan/`), `graphics.txt` and `arphic.txt`.
+
+Both read `KANJI_SOURCES` for the source directory and take the destination
+assets directory as their only argument.

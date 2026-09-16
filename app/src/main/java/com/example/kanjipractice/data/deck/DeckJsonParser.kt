@@ -24,10 +24,10 @@ object DeckJsonParser {
             cards += DeckCard(
                 character = character,
                 meaning = obj.getString("meaning"),
-                onyomi = obj.optStringOrNull("onyomi"),
-                kunyomi = obj.optStringOrNull("kunyomi"),
+                reading1 = obj.optStringOrNull("reading1"),
+                reading2 = obj.optStringOrNull("reading2"),
                 exampleWord = obj.optStringOrNull("exampleWord"),
-                jlpt = obj.optInt("jlpt", 0),
+                level = obj.optInt("level", 0),
                 deckId = obj.getString("deck"),
                 sortKey = obj.getInt("sortKey"),
             )

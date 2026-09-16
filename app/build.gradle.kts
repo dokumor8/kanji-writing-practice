@@ -37,13 +37,39 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.kanjipractice"
         // 26 = Android 8.0. Comfortably above what ML Kit and Compose need, and
         // it keeps the API surface small.
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "2.0.1"
+        versionCode = 7
+        versionName = "2.1.0"
+    }
+
+    /**
+     * One codebase, two apps.
+     *
+     * The great majority of this project is script-neutral: the review state
+     * machine, the scheduler, the canvas, the recogniser plumbing and the
+     * settings all work the same whether the characters are kanji or hanzi. What
+     * differs is the card data, the ML Kit language tag, the reading labels and
+     * the deck list, and all of that lives in `src/japanese` or `src/chinese`.
+     *
+     * The two application ids are separate on purpose: they install side by side
+     * and have their own databases.
+     */
+    flavorDimensions += "script"
+    productFlavors {
+        create("japanese") {
+            dimension = "script"
+            // Unchanged since the first release, so existing installs upgrade.
+            applicationId = "com.example.kanjipractice"
+            resValue("string", "app_name", "Kanji Practice")
+        }
+        create("chinese") {
+            dimension = "script"
+            applicationId = "com.example.hanzipractice"
+            resValue("string", "app_name", "Hanzi Practice")
+        }
     }
 
     signingConfigs {

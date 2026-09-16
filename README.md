@@ -1,4 +1,20 @@
-# Kanji Practice — recall-first kanji SRS for Android
+# Character Practice — recall-first SRS for kanji and hanzi
+
+**Two apps, one codebase.** The same review engine ships as:
+
+| App | Characters | Sets | Recogniser |
+| --- | --- | --- | --- |
+| **Kanji Practice** (`japanese`) | 2136 Jōyō kanji + 142 kana | 9 | ML Kit `ja` |
+| **Hanzi Practice** (`chinese`) | 3033 simplified Chinese characters | 7, by HSK level | ML Kit `zh-Hani-CN` |
+
+They install side by side and keep separate databases. Everything else — the
+review state machine, FSRS, the canvas, the drawing comparison, the hint popup,
+undo, the settings — is shared code. Only the card data, the language tag, the
+reading labels and the deck list differ, and those live in `app/src/japanese`
+and `app/src/chinese`.
+
+The sections below describe the review engine, which is common to both; the
+Japanese app was the original and most of the written history refers to it.
 
 A native Android app (Kotlin + Jetpack Compose) for practising kanji **production
 from memory**. The screen shows only the meaning and readings; you draw the
@@ -93,9 +109,13 @@ reused, so no toolchain download is needed beyond the app's own dependencies.
 export GRADLE_USER_HOME=/common/cr/programming/mobile/video_player/.buildcache/gradle-user-home
 export ANDROID_USER_HOME=/common/cr/programming/mobile/video_player/.buildcache/android-user-home
 
-./gradlew :app:assembleDebug          # -> app/build/outputs/apk/debug/app-debug.apk
-./gradlew :app:testDebugUnitTest :fsrs:test
+# Everything: both apps, both test suites
+./gradlew :fsrs:test :app:testJapaneseDebugUnitTest :app:testChineseDebugUnitTest
+./gradlew :app:assembleJapaneseDebug :app:assembleChineseDebug
 ```
+
+Task names are prefixed with the flavour (`Japanese`/`Chinese`), and the APKs
+land in `app/build/outputs/apk/<flavour>/<buildType>/`.
 
 `local.properties` points `sdk.dir` at
 `/common/cr/programming/mobile/video_player/.buildcache/android-sdk` (compileSdk 35,

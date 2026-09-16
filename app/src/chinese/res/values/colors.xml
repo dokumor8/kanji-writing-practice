@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Hanzi Practice: a red drawn from a seal, rather than the kanji blue. -->
+    <color name="ic_launcher_background">#9E2B25</color>
+</resources>

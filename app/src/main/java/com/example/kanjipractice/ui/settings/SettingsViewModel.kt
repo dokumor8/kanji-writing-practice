@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.deck.DeckInfo
-import com.example.kanjipractice.domain.deck.DeckKind
 import com.example.kanjipractice.domain.recognition.ModelState
 import com.example.kanjipractice.domain.recognition.RecognitionService
 import com.example.kanjipractice.domain.repository.CardRepository
@@ -29,18 +28,20 @@ data class DeckRow(
     val selected: Boolean,
 )
 
+/** The sets under one heading, e.g. "Kana" or "HSK". */
+data class DeckGroup(val name: String, val decks: List<DeckRow>)
+
 data class SettingsUiState(
-    val kanaDecks: List<DeckRow> = emptyList(),
-    val kanjiDecks: List<DeckRow> = emptyList(),
+    val groups: List<DeckGroup> = emptyList(),
     val dailyNewLimit: Int = StudySettings.DEFAULT_DAILY_NEW_LIMIT,
     val introducedToday: Int = 0,
     val modelState: ModelState = ModelState.Unknown,
 ) {
-    val selectedCount: Int
-        get() = (kanaDecks + kanjiDecks).count { it.selected }
+    private val allRows: List<DeckRow> get() = groups.flatMap { it.decks }
 
-    val selectedCardCount: Int
-        get() = (kanaDecks + kanjiDecks).filter { it.selected }.sumOf { it.cardCount }
+    val selectedCount: Int get() = allRows.count { it.selected }
+
+    val selectedCardCount: Int get() = allRows.filter { it.selected }.sumOf { it.cardCount }
 }
 
 @HiltViewModel
@@ -71,16 +72,19 @@ class SettingsViewModel @Inject constructor(
         base,
         reviewLogRepository.observeIntroducedSince(DayBoundary.startOfStudyDay(clock, zone)),
     ) { state, introduced ->
-        val rows = DeckCatalog.ALL.map { deck ->
-            DeckRow(
-                info = deck,
-                cardCount = state.counts[deck.id] ?: 0,
-                selected = deck.id in state.selected,
-            )
-        }
         SettingsUiState(
-            kanaDecks = rows.filter { it.info.kind == DeckKind.KANA },
-            kanjiDecks = rows.filter { it.info.kind == DeckKind.KANJI },
+            groups = DeckCatalog.groups.map { group ->
+                DeckGroup(
+                    name = group,
+                    decks = DeckCatalog.inGroup(group).map { deck ->
+                        DeckRow(
+                            info = deck,
+                            cardCount = state.counts[deck.id] ?: 0,
+                            selected = deck.id in state.selected,
+                        )
+                    },
+                )
+            },
             dailyNewLimit = state.limit,
             introducedToday = introduced,
             modelState = state.model,
@@ -103,15 +107,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAllKanji(selected: Boolean) {
+    /** Selects or clears every set under one heading. */
+    fun setGroup(group: String, selected: Boolean) {
         viewModelScope.launch {
             val current = settingsRepository.observeSelectedDeckIds().first()
-            val next = if (selected) {
-                current + DeckCatalog.KANJI_IDS
-            } else {
-                current - DeckCatalog.KANJI_IDS
-            }
-            settingsRepository.setSelectedDeckIds(next)
+            val ids = DeckCatalog.inGroup(group).map { it.id }.toSet()
+            settingsRepository.setSelectedDeckIds(
+                if (selected) current + ids else current - ids
+            )
         }
     }
 
@@ -125,7 +128,7 @@ class SettingsViewModel @Inject constructor(
         setDailyNewLimit(next)
     }
 
-    /** Starts (or retries) the one-off Japanese model download. */
+    /** Starts (or retries) the one-off recognition model download. */
     fun prepareModel() {
         viewModelScope.launch { runCatching { recognitionService.prepare() } }
     }

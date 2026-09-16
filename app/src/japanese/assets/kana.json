@@ -1,0 +1,1422 @@
+[
+ {
+  "character": "あ",
+  "meaning": "a",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 0
+ },
+ {
+  "character": "い",
+  "meaning": "i",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 1
+ },
+ {
+  "character": "う",
+  "meaning": "u",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 2
+ },
+ {
+  "character": "え",
+  "meaning": "e",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 3
+ },
+ {
+  "character": "お",
+  "meaning": "o",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 4
+ },
+ {
+  "character": "か",
+  "meaning": "ka",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 5
+ },
+ {
+  "character": "き",
+  "meaning": "ki",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 6
+ },
+ {
+  "character": "く",
+  "meaning": "ku",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 7
+ },
+ {
+  "character": "け",
+  "meaning": "ke",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 8
+ },
+ {
+  "character": "こ",
+  "meaning": "ko",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 9
+ },
+ {
+  "character": "さ",
+  "meaning": "sa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 10
+ },
+ {
+  "character": "し",
+  "meaning": "shi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 11
+ },
+ {
+  "character": "す",
+  "meaning": "su",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 12
+ },
+ {
+  "character": "せ",
+  "meaning": "se",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 13
+ },
+ {
+  "character": "そ",
+  "meaning": "so",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 14
+ },
+ {
+  "character": "た",
+  "meaning": "ta",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 15
+ },
+ {
+  "character": "ち",
+  "meaning": "chi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 16
+ },
+ {
+  "character": "つ",
+  "meaning": "tsu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 17
+ },
+ {
+  "character": "て",
+  "meaning": "te",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 18
+ },
+ {
+  "character": "と",
+  "meaning": "to",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 19
+ },
+ {
+  "character": "な",
+  "meaning": "na",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 20
+ },
+ {
+  "character": "に",
+  "meaning": "ni",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 21
+ },
+ {
+  "character": "ぬ",
+  "meaning": "nu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 22
+ },
+ {
+  "character": "ね",
+  "meaning": "ne",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 23
+ },
+ {
+  "character": "の",
+  "meaning": "no",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 24
+ },
+ {
+  "character": "は",
+  "meaning": "ha",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 25
+ },
+ {
+  "character": "ひ",
+  "meaning": "hi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 26
+ },
+ {
+  "character": "ふ",
+  "meaning": "fu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 27
+ },
+ {
+  "character": "へ",
+  "meaning": "he",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 28
+ },
+ {
+  "character": "ほ",
+  "meaning": "ho",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 29
+ },
+ {
+  "character": "ま",
+  "meaning": "ma",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 30
+ },
+ {
+  "character": "み",
+  "meaning": "mi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 31
+ },
+ {
+  "character": "む",
+  "meaning": "mu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 32
+ },
+ {
+  "character": "め",
+  "meaning": "me",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 33
+ },
+ {
+  "character": "も",
+  "meaning": "mo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 34
+ },
+ {
+  "character": "や",
+  "meaning": "ya",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 35
+ },
+ {
+  "character": "ゆ",
+  "meaning": "yu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 36
+ },
+ {
+  "character": "よ",
+  "meaning": "yo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 37
+ },
+ {
+  "character": "ら",
+  "meaning": "ra",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 38
+ },
+ {
+  "character": "り",
+  "meaning": "ri",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 39
+ },
+ {
+  "character": "る",
+  "meaning": "ru",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 40
+ },
+ {
+  "character": "れ",
+  "meaning": "re",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 41
+ },
+ {
+  "character": "ろ",
+  "meaning": "ro",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 42
+ },
+ {
+  "character": "わ",
+  "meaning": "wa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 43
+ },
+ {
+  "character": "を",
+  "meaning": "wo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 44
+ },
+ {
+  "character": "ん",
+  "meaning": "n",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 45
+ },
+ {
+  "character": "が",
+  "meaning": "ga",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 46
+ },
+ {
+  "character": "ぎ",
+  "meaning": "gi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 47
+ },
+ {
+  "character": "ぐ",
+  "meaning": "gu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 48
+ },
+ {
+  "character": "げ",
+  "meaning": "ge",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 49
+ },
+ {
+  "character": "ご",
+  "meaning": "go",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 50
+ },
+ {
+  "character": "ざ",
+  "meaning": "za",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 51
+ },
+ {
+  "character": "じ",
+  "meaning": "ji",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 52
+ },
+ {
+  "character": "ず",
+  "meaning": "zu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 53
+ },
+ {
+  "character": "ぜ",
+  "meaning": "ze",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 54
+ },
+ {
+  "character": "ぞ",
+  "meaning": "zo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 55
+ },
+ {
+  "character": "だ",
+  "meaning": "da",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 56
+ },
+ {
+  "character": "ぢ",
+  "meaning": "di",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 57
+ },
+ {
+  "character": "づ",
+  "meaning": "du",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 58
+ },
+ {
+  "character": "で",
+  "meaning": "de",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 59
+ },
+ {
+  "character": "ど",
+  "meaning": "do",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 60
+ },
+ {
+  "character": "ば",
+  "meaning": "ba",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 61
+ },
+ {
+  "character": "び",
+  "meaning": "bi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 62
+ },
+ {
+  "character": "ぶ",
+  "meaning": "bu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 63
+ },
+ {
+  "character": "べ",
+  "meaning": "be",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 64
+ },
+ {
+  "character": "ぼ",
+  "meaning": "bo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 65
+ },
+ {
+  "character": "ぱ",
+  "meaning": "pa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 66
+ },
+ {
+  "character": "ぴ",
+  "meaning": "pi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 67
+ },
+ {
+  "character": "ぷ",
+  "meaning": "pu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 68
+ },
+ {
+  "character": "ぺ",
+  "meaning": "pe",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 69
+ },
+ {
+  "character": "ぽ",
+  "meaning": "po",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "hiragana",
+  "sortKey": 70
+ },
+ {
+  "character": "ア",
+  "meaning": "a",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 0
+ },
+ {
+  "character": "イ",
+  "meaning": "i",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 1
+ },
+ {
+  "character": "ウ",
+  "meaning": "u",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 2
+ },
+ {
+  "character": "エ",
+  "meaning": "e",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 3
+ },
+ {
+  "character": "オ",
+  "meaning": "o",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 4
+ },
+ {
+  "character": "カ",
+  "meaning": "ka",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 5
+ },
+ {
+  "character": "キ",
+  "meaning": "ki",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 6
+ },
+ {
+  "character": "ク",
+  "meaning": "ku",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 7
+ },
+ {
+  "character": "ケ",
+  "meaning": "ke",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 8
+ },
+ {
+  "character": "コ",
+  "meaning": "ko",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 9
+ },
+ {
+  "character": "サ",
+  "meaning": "sa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 10
+ },
+ {
+  "character": "シ",
+  "meaning": "shi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 11
+ },
+ {
+  "character": "ス",
+  "meaning": "su",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 12
+ },
+ {
+  "character": "セ",
+  "meaning": "se",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 13
+ },
+ {
+  "character": "ソ",
+  "meaning": "so",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 14
+ },
+ {
+  "character": "タ",
+  "meaning": "ta",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 15
+ },
+ {
+  "character": "チ",
+  "meaning": "chi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 16
+ },
+ {
+  "character": "ツ",
+  "meaning": "tsu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 17
+ },
+ {
+  "character": "テ",
+  "meaning": "te",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 18
+ },
+ {
+  "character": "ト",
+  "meaning": "to",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 19
+ },
+ {
+  "character": "ナ",
+  "meaning": "na",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 20
+ },
+ {
+  "character": "ニ",
+  "meaning": "ni",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 21
+ },
+ {
+  "character": "ヌ",
+  "meaning": "nu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 22
+ },
+ {
+  "character": "ネ",
+  "meaning": "ne",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 23
+ },
+ {
+  "character": "ノ",
+  "meaning": "no",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 24
+ },
+ {
+  "character": "ハ",
+  "meaning": "ha",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 25
+ },
+ {
+  "character": "ヒ",
+  "meaning": "hi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 26
+ },
+ {
+  "character": "フ",
+  "meaning": "fu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 27
+ },
+ {
+  "character": "ヘ",
+  "meaning": "he",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 28
+ },
+ {
+  "character": "ホ",
+  "meaning": "ho",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 29
+ },
+ {
+  "character": "マ",
+  "meaning": "ma",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 30
+ },
+ {
+  "character": "ミ",
+  "meaning": "mi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 31
+ },
+ {
+  "character": "ム",
+  "meaning": "mu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 32
+ },
+ {
+  "character": "メ",
+  "meaning": "me",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 33
+ },
+ {
+  "character": "モ",
+  "meaning": "mo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 34
+ },
+ {
+  "character": "ヤ",
+  "meaning": "ya",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 35
+ },
+ {
+  "character": "ユ",
+  "meaning": "yu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 36
+ },
+ {
+  "character": "ヨ",
+  "meaning": "yo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 37
+ },
+ {
+  "character": "ラ",
+  "meaning": "ra",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 38
+ },
+ {
+  "character": "リ",
+  "meaning": "ri",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 39
+ },
+ {
+  "character": "ル",
+  "meaning": "ru",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 40
+ },
+ {
+  "character": "レ",
+  "meaning": "re",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 41
+ },
+ {
+  "character": "ロ",
+  "meaning": "ro",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 42
+ },
+ {
+  "character": "ワ",
+  "meaning": "wa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 43
+ },
+ {
+  "character": "ヲ",
+  "meaning": "wo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 44
+ },
+ {
+  "character": "ン",
+  "meaning": "n",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 45
+ },
+ {
+  "character": "ガ",
+  "meaning": "ga",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 46
+ },
+ {
+  "character": "ギ",
+  "meaning": "gi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 47
+ },
+ {
+  "character": "グ",
+  "meaning": "gu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 48
+ },
+ {
+  "character": "ゲ",
+  "meaning": "ge",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 49
+ },
+ {
+  "character": "ゴ",
+  "meaning": "go",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 50
+ },
+ {
+  "character": "ザ",
+  "meaning": "za",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 51
+ },
+ {
+  "character": "ジ",
+  "meaning": "ji",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 52
+ },
+ {
+  "character": "ズ",
+  "meaning": "zu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 53
+ },
+ {
+  "character": "ゼ",
+  "meaning": "ze",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 54
+ },
+ {
+  "character": "ゾ",
+  "meaning": "zo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 55
+ },
+ {
+  "character": "ダ",
+  "meaning": "da",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 56
+ },
+ {
+  "character": "ヂ",
+  "meaning": "di",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 57
+ },
+ {
+  "character": "ヅ",
+  "meaning": "du",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 58
+ },
+ {
+  "character": "デ",
+  "meaning": "de",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 59
+ },
+ {
+  "character": "ド",
+  "meaning": "do",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 60
+ },
+ {
+  "character": "バ",
+  "meaning": "ba",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 61
+ },
+ {
+  "character": "ビ",
+  "meaning": "bi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 62
+ },
+ {
+  "character": "ブ",
+  "meaning": "bu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 63
+ },
+ {
+  "character": "ベ",
+  "meaning": "be",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 64
+ },
+ {
+  "character": "ボ",
+  "meaning": "bo",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 65
+ },
+ {
+  "character": "パ",
+  "meaning": "pa",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 66
+ },
+ {
+  "character": "ピ",
+  "meaning": "pi",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 67
+ },
+ {
+  "character": "プ",
+  "meaning": "pu",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 68
+ },
+ {
+  "character": "ペ",
+  "meaning": "pe",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 69
+ },
+ {
+  "character": "ポ",
+  "meaning": "po",
+  "reading1": null,
+  "reading2": null,
+  "exampleWord": null,
+  "level": 0,
+  "deck": "katakana",
+  "sortKey": 70
+ }
+]

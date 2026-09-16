@@ -3,6 +3,7 @@ package com.example.kanjipractice.ui.review
 import com.example.fsrs.Fsrs
 import com.example.fsrs.Rating
 import com.example.kanjipractice.data.db.CardEntity
+import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.model.CardState
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.model.StrokePoint
@@ -69,7 +70,12 @@ class ReviewViewModelTest {
         cards = FakeCardRepository(deck)
         logs = FakeReviewLogRepository()
         recognition = FakeRecognitionService()
-        settings = FakeStudySettingsRepository(dailyNewLimit)
+        settings = FakeStudySettingsRepository(
+            initialLimit = dailyNewLimit,
+            // Every set on, so these tests are about the state machine rather
+            // than about a flavour's default selection.
+            initialDecks = DeckCatalog.ALL.map { it.id }.toSet(),
+        )
         return ReviewViewModel(
             cardRepository = cards,
             reviewLogRepository = logs,
@@ -87,11 +93,11 @@ class ReviewViewModelTest {
         id = id,
         character = character,
         meaning = "meaning $id",
-        onyomi = null,
-        kunyomi = null,
+        reading1 = null,
+        reading2 = null,
         exampleWord = null,
-        jlpt = 5,
-        deckId = "kanji-1",
+        level = 5,
+        deckId = DeckCatalog.ALL.first().id,
         deckSortKey = id.toInt(),
         stability = 5.0,
         difficulty = 5.0,
@@ -106,11 +112,11 @@ class ReviewViewModelTest {
         id = id,
         character = character,
         meaning = "meaning $id",
-        onyomi = null,
-        kunyomi = null,
+        reading1 = null,
+        reading2 = null,
         exampleWord = null,
-        jlpt = 5,
-        deckId = "kanji-1",
+        level = 5,
+        deckId = DeckCatalog.ALL.first().id,
         deckSortKey = id.toInt(),
         due = now,
     )
@@ -146,7 +152,10 @@ class ReviewViewModelTest {
         val deck = (1..5).map { newCard(it.toLong(), "\u65E5") }
         cards = FakeCardRepository(deck)
         logs = FakeReviewLogRepository()
-        settings = FakeStudySettingsRepository(initialLimit = 5)
+        settings = FakeStudySettingsRepository(
+            initialLimit = 5,
+            initialDecks = DeckCatalog.ALL.map { it.id }.toSet(),
+        )
         recognition = FakeRecognitionService()
         // Pretend two cards were already introduced today.
         runTest {

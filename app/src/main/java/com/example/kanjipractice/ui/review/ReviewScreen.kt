@@ -45,6 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.deck.DeckJsonParser
+import com.example.kanjipractice.domain.model.readings
 import com.example.fsrs.Rating
 import com.example.kanjipractice.ui.components.DrawingCanvas
 import com.example.kanjipractice.ui.components.DrawingPreview
@@ -205,12 +206,7 @@ private fun PromptPanel(card: CardEntity) {
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
-            if (card.onyomi != null) {
-                LabeledValue("On", card.onyomi)
-            }
-            if (card.kunyomi != null) {
-                LabeledValue("Kun", card.kunyomi)
-            }
+            card.readings().forEach { (label, value) -> LabeledValue(label, value) }
             card.exampleWord?.let { word ->
                 LabeledValue("Example", blanked(word, card.character))
             }

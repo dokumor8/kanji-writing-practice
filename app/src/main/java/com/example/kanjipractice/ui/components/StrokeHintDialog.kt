@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.kanjipractice.data.db.CardEntity
+import com.example.kanjipractice.domain.model.readings
 import com.example.kanjipractice.domain.stroke.StrokeDiagram
 
 /**
@@ -78,15 +79,9 @@ fun StrokeHintDialog(
                 )
                 Spacer(Modifier.height(8.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    if (card.onyomi != null) {
+                    card.readings().forEach { (label, value) ->
                         Text(
-                            text = "On: " + card.onyomi,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    if (card.kunyomi != null) {
-                        Text(
-                            text = "Kun: " + card.kunyomi,
+                            text = label + ": " + value,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }

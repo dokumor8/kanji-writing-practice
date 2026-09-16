@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.kanjipractice.BuildConfig
+import com.example.kanjipractice.domain.AppScript
 
 /**
  * Attribution and licences.
@@ -78,35 +79,14 @@ fun LicencesScreen(onBack: () -> Unit) {
             }
 
             Section("Card data")
-            Entry(
-                title = "KanjiVG - stroke order diagrams",
-                body = "Copyright 2009-2024 Ulrich Apel and contributors. Licensed " +
-                    "CC BY-SA 3.0, redistributed unmodified.",
-                link = "https://kanjivg.tagaini.net/",
-                onOpen = uriHandler::openUri,
-            )
-            Entry(
-                title = "KANJIDIC2 - meanings, readings, JLPT levels",
-                body = "Copyright James William Breen and the Electronic Dictionary " +
-                    "Research and Development Group. Licensed CC BY-SA 4.0.",
-                link = "https://www.edrdg.org/edrdg/licence.html",
-                onOpen = uriHandler::openUri,
-            )
-            Entry(
-                title = "JLPT vocabulary - example words",
-                body = "open-anki-jlpt-decks, copyright 2020 Jamie Sinclair. " +
-                    "Licensed MIT.",
-                link = "https://github.com/jamsinclair/open-anki-jlpt-decks",
-                onOpen = uriHandler::openUri,
-            )
-            Entry(
-                title = "FSRS v6 - scheduling",
-                body = "Algorithm and default parameters from the " +
-                    "open-spaced-repetition project, MIT. This app's Kotlin " +
-                    "implementation is original code.",
-                link = "https://github.com/open-spaced-repetition/fsrs-rs",
-                onOpen = uriHandler::openUri,
-            )
+            AppScript.licences.forEach { entry ->
+                Entry(
+                    title = entry.title,
+                    body = entry.body,
+                    link = entry.link,
+                    onOpen = uriHandler::openUri,
+                )
+            }
 
             Section("Software")
             Entry(

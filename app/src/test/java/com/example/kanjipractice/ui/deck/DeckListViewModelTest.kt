@@ -2,6 +2,7 @@ package com.example.kanjipractice.ui.deck
 
 import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.db.ReviewLogEntity
+import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.model.CardState
 import com.example.kanjipractice.domain.recognition.ModelState
 import com.example.kanjipractice.domain.settings.StudySettings
@@ -63,7 +64,12 @@ class DeckListViewModelTest {
     ): DeckListViewModel {
         cards = FakeCardRepository(emptyList())
         logs = FakeReviewLogRepository()
-        settings = FakeStudySettingsRepository(dailyNewLimit)
+        // Every set selected, so a test about counts is not also a test about
+        // which sets a flavour happens to enable by default.
+        settings = FakeStudySettingsRepository(
+            initialLimit = dailyNewLimit,
+            initialDecks = DeckCatalog.ALL.map { it.id }.toSet(),
+        )
         recognition = FakeRecognitionService()
         val vm = DeckListViewModel(
             cardRepository = cards,
@@ -82,20 +88,20 @@ class DeckListViewModelTest {
         return vm
     }
 
-    private fun newCard(id: Long, deck: String = "kanji-1") = CardEntity(
+    private fun newCard(id: Long, deck: String = DeckCatalog.ALL.first().id) = CardEntity(
         id = id,
         character = "\u65E5",
         meaning = "m",
-        onyomi = null,
-        kunyomi = null,
+        reading1 = null,
+        reading2 = null,
         exampleWord = null,
-        jlpt = 5,
+        level = 5,
         deckId = deck,
         deckSortKey = id.toInt(),
         due = now,
     )
 
-    private fun reviewedCard(id: Long, deck: String = "kanji-1") = newCard(id, deck).copy(
+    private fun reviewedCard(id: Long, deck: String = DeckCatalog.ALL.first().id) = newCard(id, deck).copy(
         state = CardState.REVIEW,
         reps = 1,
         stability = 5.0,
@@ -193,14 +199,17 @@ class DeckListViewModelTest {
 
     @Test
     fun onlyCardsFromSelectedSetsAreCounted() {
-        val deck = (1..5).map { newCard(it.toLong(), deck = "kanji-1") } +
-            (6..9).map { newCard(it.toLong(), deck = "hiragana") }
+        val first = DeckCatalog.ALL[0].id
+        val second = DeckCatalog.ALL[1].id
+        val deck = (1..5).map { newCard(it.toLong(), deck = first) } +
+            (6..9).map { newCard(it.toLong(), deck = second) }
         val vm = viewModel(onSeed = { cards.cards.value = deck })
 
+        settings.deckIds.value = setOf(first)
         assertEquals(5, vm.uiState.value.newRemainingInDeck)
         assertEquals(5, vm.uiState.value.totalCount)
 
-        settings.deckIds.value = setOf("kanji-1", "hiragana")
+        settings.deckIds.value = setOf(first, second)
         assertEquals(9, vm.uiState.value.newRemainingInDeck)
         assertEquals(9, vm.uiState.value.totalCount)
     }

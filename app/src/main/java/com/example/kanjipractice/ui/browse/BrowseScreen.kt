@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.domain.deck.DeckCatalog
+import com.example.kanjipractice.domain.model.levelLabel
 import com.example.kanjipractice.domain.repository.CardRepository
 import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -109,7 +110,7 @@ private fun CardRow(card: CardEntity) {
 
 private fun detailLine(card: CardEntity): String {
     val parts = mutableListOf(DeckCatalog.nameOf(card.deckId.orEmpty()))
-    if (card.jlpt in 1..5) parts += "N" + card.jlpt
+    card.levelLabel()?.let { parts += it }
     parts += card.state.name.lowercase()
     parts += "reps " + card.reps
     parts += "S " + format(card.stability)

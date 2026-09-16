@@ -33,7 +33,7 @@ for it:
 
   * the Android application source, under app/src/
   * the vendored FSRS v6 module, under fsrs/
-  * the generated kana table, app/src/main/assets/kana.json
+  * the generated kana table, app/src/japanese/assets/kana.json
   * the asset build scripts under tools/
   * the documentation
 
@@ -41,18 +41,37 @@ It does NOT apply to material that came from elsewhere and is included here
 under someone else's licence. That material keeps its own licence, and none of
 it is relicensed by the paragraph above:
 
-  * app/src/main/assets/kanjivg/*.svg
-      KanjiVG. Copyright 2009-2024 Ulrich Apel and contributors.
-      Creative Commons Attribution-ShareAlike 3.0.
-      https://kanjivg.tagaini.net/
-
-  * app/src/main/assets/kanji.json
+  * app/src/japanese/assets/kanji.json
       A derivative of KANJIDIC2. Copyright James William Breen and the
       Electronic Dictionary Research and Development Group.
       Creative Commons Attribution-ShareAlike 4.0.
       https://www.edrdg.org/edrdg/licence.html
       It also carries example words derived from open-anki-jlpt-decks,
       MIT, copyright 2020 Jamie Sinclair.
+
+  * app/src/japanese/assets/kanjivg/*.svg
+      KanjiVG. Copyright 2009-2024 Ulrich Apel and contributors.
+      Creative Commons Attribution-ShareAlike 3.0.
+      https://kanjivg.tagaini.net/
+
+  * app/src/chinese/assets/strokes/*.svg
+      Generated from Make Me a Hanzi (https://github.com/skishore/makemeahanzi),
+      whose stroke graphics are derived from the Arphic PL KaitiM GB and
+      Arphic PL UKai fonts. Distributed under the Arphic Public License,
+      copyright 1999 Arphic Technology Co., Ltd. The licence text must travel
+      with the data and is bundled at
+      app/src/chinese/assets/ARPHICPL.TXT. The files here are a format
+      conversion of the published stroke medians into SVG, which the Arphic
+      Public License permits provided the conversion is noted and the result
+      stays under the same licence.
+
+  * app/src/chinese/assets/hanzi.json
+      Definitions and pinyin derived from Unihan
+      (https://www.unicode.org/charts/unihan.html), copyright Unicode, Inc.,
+      distributed under the Unicode License v3.
+      Levels and word frequencies derived from complete-hsk-vocabulary
+      (https://github.com/drkameleon/complete-hsk-vocabulary), MIT,
+      copyright 2026 Yanis Zafirópulos.
 
   * ML Kit and Google Play Services are build dependencies. They are not
       distributed in this repository. See ATTRIBUTION.md.

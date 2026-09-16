@@ -21,12 +21,19 @@ jobs:
       # The Android SDK is preinstalled on the runner and picked up through
       # ANDROID_HOME, so no local.properties is needed here.
       - name: Unit tests
-        run: ./gradlew :fsrs:test :app:testDebugUnitTest
+        run: |
+          ./gradlew :fsrs:test \
+            :app:testJapaneseDebugUnitTest :app:testChineseDebugUnitTest
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug
+      - name: Build debug APKs
+        run: ./gradlew :app:assembleJapaneseDebug :app:assembleChineseDebug
 
       - uses: actions/upload-artifact@v4
         with:
           name: kanji-practice-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/japanese/debug/app-japanese-debug.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hanzi-practice-debug
+          path: app/build/outputs/apk/chinese/debug/app-chinese-debug.apk

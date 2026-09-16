@@ -7,6 +7,7 @@ import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.db.KanjiDatabase
 import com.example.kanjipractice.data.deck.DeckCard
 import com.example.kanjipractice.data.deck.DeckJsonParser
+import com.example.kanjipractice.domain.AppScript
 import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -45,9 +46,9 @@ class DeckSeeder @Inject constructor(
             DeckCatalog.DATA_VERSION && cardDao.countUnassigned() == 0
         if (alreadySynced) return 0
 
-        // Parsing ~450 KB of JSON for 2278 cards, then a write per card. Both
-        // belong off the main thread: on an upgrade this runs before the first
-        // frame the user sees.
+        // Parsing a few hundred KB of JSON for a few thousand cards, then a write
+        // per card. Both belong off the main thread: on an upgrade this runs
+        // before the first frame the user sees.
         val cards = withContext(Dispatchers.IO) { loadCards() }
         val inserted = cardDao.insertMissing(
             cards.map { it.toEntity(LocalDateTime.now(clock)) }
@@ -71,13 +72,13 @@ class DeckSeeder @Inject constructor(
      */
     fun loadCards(): List<LoadedCard> {
         val cards = ArrayList<LoadedCard>()
-        for (asset in ASSETS) {
+        for (asset in AppScript.cardAssets) {
             val json = try {
                 context.assets.open(asset).bufferedReader().use { it.readText() }
             } catch (e: IOException) {
                 throw IllegalStateException("bundled card set $asset is missing", e)
             }
-            DeckJsonParser.parse(json).forEach { cards += it.withId() }
+            DeckJsonParser.parse(json).forEach { cards += LoadedCard(it) }
         }
         return cards
     }
@@ -92,10 +93,10 @@ class DeckSeeder @Inject constructor(
             id = id,
             character = card.character,
             meaning = card.meaning,
-            onyomi = card.onyomi,
-            kunyomi = card.kunyomi,
+            reading1 = card.reading1,
+            reading2 = card.reading2,
             exampleWord = card.exampleWord,
-            jlpt = card.jlpt,
+            level = card.level,
             deckId = card.deckId,
             deckSortKey = card.sortKey,
             // New cards are due immediately.
@@ -103,13 +104,8 @@ class DeckSeeder @Inject constructor(
         )
     }
 
-    private fun DeckCard.withId() = LoadedCard(this)
-
-    companion object {
-        /** Every bundled set. Kana are here so their stroke diagrams work too. */
-        val ASSETS = listOf("kanji.json", "kana.json")
-
+    private companion object {
         /** What Room returns for a row an INSERT ... OR IGNORE skipped. */
-        private const val IGNORED_ROW = -1L
+        const val IGNORED_ROW = -1L
     }
 }

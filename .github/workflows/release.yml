@@ -1,14 +1,14 @@
 name: Release
 
-# Tag a commit to publish a sideloadable APK:
-#   git tag v2.0.0 && git push origin v2.0.0
+# Tag a commit to publish sideloadable APKs for both apps:
+#   git tag v2.1.0 && git push origin v2.1.0
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing tag to attach the APK to'
+        description: 'Existing tag to attach the APKs to'
         required: true
 
 permissions:
@@ -28,7 +28,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Unit tests
-        run: ./gradlew :fsrs:test :app:testDebugUnitTest
+        run: |
+          ./gradlew :fsrs:test \
+            :app:testJapaneseDebugUnitTest :app:testChineseDebugUnitTest
 
       - name: Restore the signing key
         env:
@@ -45,21 +47,26 @@ jobs:
 
       # Without a stable key Android refuses to install an update over an
       # existing install, so the key is required rather than optional.
-      - name: Build release APK
+      - name: Build release APKs
         env:
           KEYSTORE_FILE: release.jks
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew :app:assembleRelease
+        run: ./gradlew :app:assembleJapaneseRelease :app:assembleChineseRelease
 
-      - name: Verify the APK is signed
+      - name: Verify the APKs are signed
         run: |
-          APK=app/build/outputs/apk/release/app-release.apk
-          $ANDROID_HOME/build-tools/34.0.0/apksigner verify --print-certs "$APK"
+          for apk in app/build/outputs/apk/japanese/release/app-japanese-release.apk \
+                     app/build/outputs/apk/chinese/release/app-chinese-release.apk; do
+            echo "$apk"
+            $ANDROID_HOME/build-tools/34.0.0/apksigner verify --print-certs "$apk" | head -1
+          done
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: |
+            app/build/outputs/apk/japanese/release/app-japanese-release.apk
+            app/build/outputs/apk/chinese/release/app-chinese-release.apk
           generate_release_notes: true
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}

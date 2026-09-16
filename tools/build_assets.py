@@ -97,10 +97,10 @@ def kanji_cards(data, words):
         cards.append({
             'character': kanji,
             'meaning': meaning,
-            'onyomi': ', '.join(to_katakana(r) for r in (info.get('readings_on') or [])) or None,
-            'kunyomi': ', '.join(kun) or None,
+            'reading1': ', '.join(to_katakana(r) for r in (info.get('readings_on') or [])) or None,
+            'reading2': ', '.join(kun) or None,
             'exampleWord': example.replace(kanji, '\uFF3F') if example else None,
-            'jlpt': info.get('jlpt_new') or 0,
+            'level': info.get('jlpt_new') or 0,
             'deck': 'kanji-%d' % min(index // KANJI_SET_SIZE + 1, KANJI_SET_COUNT),
             'sortKey': index,
         })
@@ -138,10 +138,10 @@ def kana_cards():
             cards.append({
                 'character': to_katakana(char) if convert else char,
                 'meaning': romaji,
-                'onyomi': None,
-                'kunyomi': None,
+                'reading1': None,
+                'reading2': None,
                 'exampleWord': None,
-                'jlpt': 0,
+                'level': 0,
                 'deck': deck,
                 'sortKey': index,
             })

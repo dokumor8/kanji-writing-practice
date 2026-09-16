@@ -126,10 +126,10 @@ class ReviewSchedulerTest {
         id = 1L,
         character = "\u99C5",
         meaning = "station",
-        onyomi = "\u30A8\u30AD",
-        kunyomi = null,
+        reading1 = "\u30A8\u30AD",
+        reading2 = null,
         exampleWord = null,
-        jlpt = 4,
+        level = 4,
         due = now,
     )
 }

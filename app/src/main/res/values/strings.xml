@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  app_name is not here: each product flavour sets it, so the two apps have their
+  own names on the launcher.
+-->
 <resources>
-    <string name="app_name">Kanji Practice</string>
 </resources>

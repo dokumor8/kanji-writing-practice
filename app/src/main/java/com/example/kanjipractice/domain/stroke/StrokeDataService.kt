@@ -41,7 +41,7 @@ class StrokeDataService @Inject constructor(
             return@withContext StrokeDiagram.EMPTY
         }
         try {
-            KanjiVgParser.parse(svg)
+            StrokeSvgParser.parse(svg)
         } catch (e: IllegalArgumentException) {
             // A malformed diagram should degrade to "show the character", not crash.
             StrokeDiagram.EMPTY

@@ -48,10 +48,10 @@ class StudyQueueBuilderTest {
         id = id,
         character = character,
         meaning = "m",
-        onyomi = null,
-        kunyomi = null,
+        reading1 = null,
+        reading2 = null,
         exampleWord = null,
-        jlpt = 5,
+        level = 5,
         due = now,
     )
 }

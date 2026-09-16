@@ -71,18 +71,19 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            SectionHeader("Kana")
-            state.kanaDecks.forEach { row ->
-                DeckToggleRow(row, viewModel::toggleDeck)
-            }
-
-            SectionHeader("Kanji")
-            state.kanjiDecks.forEach { row ->
-                DeckToggleRow(row, viewModel::toggleDeck)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { viewModel.setAllKanji(true) }) { Text("All") }
-                TextButton(onClick = { viewModel.setAllKanji(false) }) { Text("None") }
+            state.groups.forEach { group ->
+                SectionHeader(group.name)
+                group.decks.forEach { row ->
+                    DeckToggleRow(row, viewModel::toggleDeck)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { viewModel.setGroup(group.name, true) }) {
+                        Text("All")
+                    }
+                    TextButton(onClick = { viewModel.setGroup(group.name, false) }) {
+                        Text("None")
+                    }
+                }
             }
 
             SectionHeader("New cards per day")
