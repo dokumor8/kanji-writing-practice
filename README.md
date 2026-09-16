@@ -428,8 +428,19 @@ what makes the attribution reachable without unzipping it. If you ever edit the
 SVGs — recolouring them, converting them to another format — the result is an
 adaptation and inherits CC BY-SA.
 
-**This repository contains no LICENSE file.** The application code has not been
-given a licence yet, which is worth deciding before publishing anywhere.
+**The project's own code is public domain.** `LICENSE` is the
+[Unlicense](https://unlicense.org/): the application source, the vendored FSRS
+module, the generated kana table, the build scripts and the documentation are all
+dedicated to the public domain. The Unlicense is used rather than CC0 because
+Creative Commons themselves recommend against CC licences for software, because
+the Unlicense is purpose-built for code and OSI-approved where CC0 is not, and
+because it carries a permissive fallback licence for jurisdictions where a
+public-domain dedication may not take effect.
+
+That dedication covers **only** what was written for this project. The stroke
+diagrams (CC BY-SA 3.0) and the kanji data (CC BY-SA 4.0) keep their own licences
+and are not relicensed by it; `LICENSE` spells out the split, and
+`ATTRIBUTION.md` has the detail.
 
 ## Distribution and privacy
 

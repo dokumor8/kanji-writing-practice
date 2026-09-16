@@ -63,6 +63,20 @@ fun LicencesScreen(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            Section("This app")
+            Text(
+                text = "The code in this app is released into the public domain " +
+                    "under the Unlicense. That does not extend to the card data or " +
+                    "the stroke diagrams, which keep the licences listed below.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(
+                onClick = { uriHandler.openUri("https://unlicense.org/") },
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            ) {
+                Text(text = "https://unlicense.org/", style = MaterialTheme.typography.labelSmall)
+            }
+
             Section("Card data")
             Entry(
                 title = "KanjiVG - stroke order diagrams",
