@@ -8,11 +8,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.kanjipractice.ui.browse.BrowseScreen
 import com.example.kanjipractice.ui.deck.DeckListScreen
 import com.example.kanjipractice.ui.review.ReviewScreen
+import com.example.kanjipractice.ui.settings.SettingsScreen
 
 private object Routes {
     const val DECK = "deck"
     const val REVIEW = "review"
     const val BROWSE = "browse"
+    const val SETTINGS = "settings"
 }
 
 @Composable
@@ -22,6 +24,7 @@ fun KanjiPracticeApp(navController: NavHostController = rememberNavController())
             DeckListScreen(
                 onStartReview = { navController.navigate(Routes.REVIEW) },
                 onBrowse = { navController.navigate(Routes.BROWSE) },
+                onSettings = { navController.navigate(Routes.SETTINGS) },
             )
         }
         composable(Routes.REVIEW) {
@@ -31,6 +34,9 @@ fun KanjiPracticeApp(navController: NavHostController = rememberNavController())
         }
         composable(Routes.BROWSE) {
             BrowseScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

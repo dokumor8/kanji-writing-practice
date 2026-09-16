@@ -1,12 +1,17 @@
 package com.example.kanjipractice.data
 
 /**
- * Fills the cards table from the bundled deck on first launch.
+ * Loads the bundled card sets into the database.
  *
  * An interface only so the deck screen can be tested without an Android
  * `Context` behind the asset loader.
  */
 interface DeckInitializer {
-    /** @return the number of cards inserted; 0 when the deck was already seeded. */
-    suspend fun seedIfEmpty(): Int
+    /**
+     * Inserts any card that is not in the database yet, and (re)assigns every
+     * card to its set. Safe to call on every launch.
+     *
+     * @return the number of cards inserted.
+     */
+    suspend fun syncDecks(): Int
 }

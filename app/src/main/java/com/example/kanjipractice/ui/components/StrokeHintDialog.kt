@@ -44,7 +44,7 @@ fun StrokeHintDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Got it - let me draw") }
+            TextButton(onClick = onDismiss) { Text("Close") }
         },
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -91,13 +91,6 @@ fun StrokeHintDialog(
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Close this and draw it from memory. You can reopen the hint " +
-                        "as many times as you need.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         },
     )

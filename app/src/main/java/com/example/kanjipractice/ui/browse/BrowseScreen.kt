@@ -30,22 +30,30 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.data.db.CardEntity
+import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.repository.CardRepository
+import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 /**
- * Read-only deck browser (plan, section 9.3). Low priority in the plan, but it
- * is the only way to see FSRS state without attaching a debugger.
+ * Read-only deck browser. Shows the selected sets only, so it reflects what the
+ * user is actually studying.
  */
 @HiltViewModel
 class BrowseViewModel @Inject constructor(
     cardRepository: CardRepository,
+    settingsRepository: StudySettingsRepository,
 ) : ViewModel() {
-    val cards: StateFlow<List<CardEntity>> = cardRepository.observeAll()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val cards: StateFlow<List<CardEntity>> = settingsRepository.observeSelectedDeckIds()
+        .flatMapLatest { cardRepository.observeAll(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 }
 
@@ -91,14 +99,22 @@ private fun CardRow(card: CardEntity) {
         ) {
             Text(text = card.meaning, style = MaterialTheme.typography.bodyLarge)
             Text(
-                text = "N" + card.jlpt + " - " + card.state.name.lowercase() +
-                    " - reps " + card.reps + " - S " + format(card.stability) +
-                    " - D " + format(card.difficulty),
+                text = detailLine(card),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+}
+
+private fun detailLine(card: CardEntity): String {
+    val parts = mutableListOf(DeckCatalog.nameOf(card.deckId.orEmpty()))
+    if (card.jlpt in 1..5) parts += "N" + card.jlpt
+    parts += card.state.name.lowercase()
+    parts += "reps " + card.reps
+    parts += "S " + format(card.stability)
+    parts += "D " + format(card.difficulty)
+    return parts.joinToString(" - ")
 }
 
 private fun format(value: Double): String =

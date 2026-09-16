@@ -109,11 +109,12 @@ class ReviewViewModel @Inject constructor(
 
     private suspend fun buildQueue(): List<CardEntity> {
         val settings = currentStudySettings()
+        val deckIds = settingsRepository.observeSelectedDeckIds().first()
         // Everything due today, not everything due this minute.
         val dueReviews = cardRepository
-            .observeDueReviews(DayBoundary.endOfStudyDay(clock, zone))
+            .observeDueReviews(DayBoundary.endOfStudyDay(clock, zone), deckIds)
             .first()
-        val newCards = cardRepository.nextNewCards(settings.remainingNewAllowance)
+        val newCards = cardRepository.nextNewCards(settings.remainingNewAllowance, deckIds)
         return StudyQueueBuilder.build(dueReviews, newCards, settings.remainingNewAllowance)
     }
 

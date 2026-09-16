@@ -22,6 +22,15 @@ data class CardEntity(
     val exampleWord: String?,
     val jlpt: Int,
 
+    /**
+     * Which card set this belongs to, and where it sits in the overall order.
+     *
+     * Nullable because cards created before sets existed have no membership until
+     * the seeder assigns one; nothing schedules a card with no set.
+     */
+    val deckId: String? = null,
+    val deckSortKey: Int? = null,
+
     // ---- FSRS memory state ----
     val stability: Double = 0.0,
     val difficulty: Double = 0.0,

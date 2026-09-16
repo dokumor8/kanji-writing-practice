@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,6 +7,30 @@ plugins {
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
+
+/**
+ * Release signing.
+ *
+ * The keystore and its passwords are deliberately not in the repository. They
+ * come from keystore.properties (git-ignored) for local builds, or from the
+ * environment for CI. Without them the release build still runs, but produces an
+ * unsigned APK that cannot be installed.
+ */
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingValue(key: String, env: String): String? =
+    (keystoreProperties.getProperty(key) ?: System.getenv(env))?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "KEYSTORE_FILE")
+val hasReleaseSigning = releaseStoreFile != null &&
+    signingValue("storePassword", "KEYSTORE_PASSWORD") != null &&
+    signingValue("keyAlias", "KEY_ALIAS") != null &&
+    signingValue("keyPassword", "KEY_PASSWORD") != null
 
 android {
     namespace = "com.example.kanjipractice"
@@ -16,17 +42,36 @@ android {
         // it keeps the API surface small.
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "2.0"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseStoreFile!!)
+                storePassword = signingValue("storePassword", "KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
+            // Left off on purpose: R8 needs keep rules for ML Kit, Room and Hilt,
+            // and a sideloaded app gains little from the size win compared with
+            // the risk of a rule missing something at runtime.
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                null
+            }
         }
     }
 

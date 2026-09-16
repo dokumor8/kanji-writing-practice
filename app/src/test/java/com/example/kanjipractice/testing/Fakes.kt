@@ -3,6 +3,7 @@ package com.example.kanjipractice.testing
 import com.example.kanjipractice.data.DeckInitializer
 import com.example.kanjipractice.data.db.CardEntity
 import com.example.kanjipractice.data.db.ReviewLogEntity
+import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.model.CardState
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.recognition.ModelState
@@ -35,25 +36,44 @@ class FakeCardRepository(cards: List<CardEntity> = emptyList()) : CardRepository
 
     private fun isNew(card: CardEntity) = card.state == CardState.NEW
 
-    override fun observeDueReviews(before: LocalDateTime): Flow<List<CardEntity>> =
+    private fun CardEntity.isIn(deckIds: Set<String>) = deckId != null && deckId in deckIds
+
+    override fun observeDueReviews(
+        before: LocalDateTime,
+        deckIds: Set<String>,
+    ): Flow<List<CardEntity>> =
         cards.map { list ->
-            list.filter { !isNew(it) && it.due.isBefore(before) }.sortedBy { it.due }
+            list.filter { !isNew(it) && it.due.isBefore(before) && it.isIn(deckIds) }
+                .sortedBy { it.due }
         }
 
-    override fun observeDueReviewCount(before: LocalDateTime): Flow<Int> =
-        cards.map { list -> list.count { !isNew(it) && it.due.isBefore(before) } }
+    override fun observeDueReviewCount(
+        before: LocalDateTime,
+        deckIds: Set<String>,
+    ): Flow<Int> =
+        cards.map { list ->
+            list.count { !isNew(it) && it.due.isBefore(before) && it.isIn(deckIds) }
+        }
 
-    override suspend fun nextNewCards(limit: Int): List<CardEntity> =
+    override suspend fun nextNewCards(limit: Int, deckIds: Set<String>): List<CardEntity> =
         cards.value
-            .filter { isNew(it) }
-            .sortedWith(compareByDescending<CardEntity> { it.jlpt }.thenBy { it.id })
+            .filter { isNew(it) && it.isIn(deckIds) }
+            .sortedWith(compareBy({ it.deckSortKey ?: Int.MAX_VALUE }, { it.id }))
             .take(limit.coerceAtLeast(0))
 
-    override fun observeNewCount(): Flow<Int> = cards.map { list -> list.count { isNew(it) } }
+    override fun observeNewCount(deckIds: Set<String>): Flow<Int> =
+        cards.map { list -> list.count { isNew(it) && it.isIn(deckIds) } }
 
-    override fun observeTotalCount(): Flow<Int> = cards.map { it.size }
+    override fun observeTotalCount(deckIds: Set<String>): Flow<Int> =
+        cards.map { list -> list.count { it.isIn(deckIds) } }
 
-    override fun observeAll(): Flow<List<CardEntity>> = cards
+    override fun observeAll(deckIds: Set<String>): Flow<List<CardEntity>> =
+        cards.map { list -> list.filter { it.isIn(deckIds) } }
+
+    override fun observeDeckCounts(): Flow<Map<String, Int>> =
+        cards.map { list ->
+            list.mapNotNull { it.deckId }.groupingBy { it }.eachCount()
+        }
 
     override suspend fun getById(id: Long): CardEntity? = cards.value.firstOrNull { it.id == id }
 
@@ -109,14 +129,30 @@ class FakeReviewLogRepository : ReviewLogRepository {
 
 class FakeStudySettingsRepository(
     initialLimit: Int = StudySettings.DEFAULT_DAILY_NEW_LIMIT,
+    initialDecks: Set<String> = DeckCatalog.DEFAULT_SELECTED,
+    initialDeckDataVersion: Int = DeckCatalog.DATA_VERSION,
 ) : StudySettingsRepository {
 
     val limit = MutableStateFlow(initialLimit)
+    val deckIds = MutableStateFlow(initialDecks)
+    val deckDataVersion = MutableStateFlow(initialDeckDataVersion)
 
     override fun observeDailyNewLimit(): Flow<Int> = limit
 
     override suspend fun setDailyNewLimit(limit: Int) {
         this.limit.value = limit
+    }
+
+    override fun observeSelectedDeckIds(): Flow<Set<String>> = deckIds
+
+    override suspend fun setSelectedDeckIds(ids: Set<String>) {
+        deckIds.value = ids
+    }
+
+    override fun observeDeckDataVersion(): Flow<Int> = deckDataVersion
+
+    override suspend fun setDeckDataVersion(version: Int) {
+        deckDataVersion.value = version
     }
 }
 
@@ -179,7 +215,7 @@ class FakeDeckInitializer(private val onSeed: suspend () -> Unit = {}) : DeckIni
     var seedCount = 0
         private set
 
-    override suspend fun seedIfEmpty(): Int {
+    override suspend fun syncDecks(): Int {
         seedCount++
         onSeed()
         return 0

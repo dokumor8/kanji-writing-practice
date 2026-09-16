@@ -82,7 +82,7 @@ class DeckListViewModelTest {
         return vm
     }
 
-    private fun newCard(id: Long) = CardEntity(
+    private fun newCard(id: Long, deck: String = "kanji-1") = CardEntity(
         id = id,
         character = "\u65E5",
         meaning = "m",
@@ -90,10 +90,12 @@ class DeckListViewModelTest {
         kunyomi = null,
         exampleWord = null,
         jlpt = 5,
+        deckId = deck,
+        deckSortKey = id.toInt(),
         due = now,
     )
 
-    private fun reviewedCard(id: Long) = newCard(id).copy(
+    private fun reviewedCard(id: Long, deck: String = "kanji-1") = newCard(id, deck).copy(
         state = CardState.REVIEW,
         reps = 1,
         stability = 5.0,
@@ -190,22 +192,28 @@ class DeckListViewModelTest {
     }
 
     @Test
-    fun nudgingTheDailyLimitChangesItInSteps() {
-        val vm = viewModel()
-        val start = vm.uiState.value.dailyNewLimit
+    fun onlyCardsFromSelectedSetsAreCounted() {
+        val deck = (1..5).map { newCard(it.toLong(), deck = "kanji-1") } +
+            (6..9).map { newCard(it.toLong(), deck = "hiragana") }
+        val vm = viewModel(onSeed = { cards.cards.value = deck })
 
-        vm.nudgeDailyNewLimit(+1)
-        assertTrue(vm.uiState.value.dailyNewLimit > start)
+        assertEquals(5, vm.uiState.value.newRemainingInDeck)
+        assertEquals(5, vm.uiState.value.totalCount)
 
-        vm.nudgeDailyNewLimit(-1)
-        assertEquals(start, vm.uiState.value.dailyNewLimit)
+        settings.deckIds.value = setOf("kanji-1", "hiragana")
+        assertEquals(9, vm.uiState.value.newRemainingInDeck)
+        assertEquals(9, vm.uiState.value.totalCount)
     }
 
     @Test
-    fun theDailyLimitCannotBeNudgedBelowZero() {
-        val vm = viewModel()
-        repeat(20) { vm.nudgeDailyNewLimit(-1) }
-        assertEquals(0, vm.uiState.value.dailyNewLimit)
+    fun withNothingSelectedThereIsNothingToStudy() {
+        val deck = (1..5).map { newCard(it.toLong()) }
+        val vm = viewModel(onSeed = { cards.cards.value = deck })
+
+        settings.deckIds.value = emptySet()
+
+        assertEquals(0, vm.uiState.value.studyCount)
+        assertTrue(vm.uiState.value.nothingSelected)
     }
 
     @Test

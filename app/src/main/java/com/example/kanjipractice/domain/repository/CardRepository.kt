@@ -4,6 +4,13 @@ import com.example.kanjipractice.data.db.CardEntity
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 
+/**
+ * Card access, always scoped to the sets the user has switched on.
+ *
+ * An empty [deckIds] means "nothing is selected" and yields empty results rather
+ * than an unfiltered query -- `IN ()` is not valid SQL, and silently returning
+ * the whole deck would be the wrong answer anyway.
+ */
 interface CardRepository {
 
     /**
@@ -12,18 +19,21 @@ interface CardRepository {
      * Callers pass the end of the current study day, not the current instant: see
      * DayBoundary.
      */
-    fun observeDueReviews(before: LocalDateTime): Flow<List<CardEntity>>
+    fun observeDueReviews(before: LocalDateTime, deckIds: Set<String>): Flow<List<CardEntity>>
 
-    fun observeDueReviewCount(before: LocalDateTime): Flow<Int>
+    fun observeDueReviewCount(before: LocalDateTime, deckIds: Set<String>): Flow<Int>
 
-    /** The next [limit] never-reviewed cards in deck order. */
-    suspend fun nextNewCards(limit: Int): List<CardEntity>
+    /** The next [limit] never-reviewed cards, commonest first. */
+    suspend fun nextNewCards(limit: Int, deckIds: Set<String>): List<CardEntity>
 
-    fun observeNewCount(): Flow<Int>
+    fun observeNewCount(deckIds: Set<String>): Flow<Int>
 
-    fun observeTotalCount(): Flow<Int>
+    fun observeTotalCount(deckIds: Set<String>): Flow<Int>
 
-    fun observeAll(): Flow<List<CardEntity>>
+    fun observeAll(deckIds: Set<String>): Flow<List<CardEntity>>
+
+    /** How many cards each set holds, selected or not. */
+    fun observeDeckCounts(): Flow<Map<String, Int>>
 
     suspend fun getById(id: Long): CardEntity?
 

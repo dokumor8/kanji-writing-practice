@@ -90,7 +90,7 @@ fun ReviewScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (val current = state) {
-                ReviewUiState.Loading -> CenteredMessage("Loading your reviews...")
+                ReviewUiState.Loading -> CenteredMessage("Loading...")
                 is ReviewUiState.SessionComplete -> SessionComplete(current, onExit)
                 is ReviewUiState.Prompt -> PromptContent(current, viewModel)
                 is ReviewUiState.Success -> SuccessContent(current, viewModel)
@@ -290,8 +290,7 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
         }
         if (state.recognized == null) {
             Text(
-                text = "Recognition was unavailable, so this card was not checked by " +
-                    "the recogniser. Rate it honestly.",
+                text = "Not checked - the recogniser was unavailable.",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -316,38 +315,37 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
 
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            text = "How well did you recall it?",
-            style = MaterialTheme.typography.bodyMedium,
-        )
         if (state.hintCount > 0) {
             Text(
-                text = "You used the hint, so Again is selected. Change it if you " +
-                    "actually recalled it.",
+                text = "Hint used",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
 
-        // Again is included so a wrong drawing that the recogniser accepted can
-        // still be failed by the user.
-        Row(
+        // Again is here so a wrong drawing the recogniser accepted can still be
+        // failed. Two rows of two rather than one row of four: four labels do not
+        // fit across a phone, and "Again" was being clipped to "Agai".
+        Column(
             Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            RatingButton("Again", state.rating == Rating.AGAIN, Modifier.weight(1f)) {
-                viewModel.rate(Rating.AGAIN)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RatingButton("Again", state.rating == Rating.AGAIN, Modifier.weight(1f)) {
+                    viewModel.rate(Rating.AGAIN)
+                }
+                RatingButton("Hard", state.rating == Rating.HARD, Modifier.weight(1f)) {
+                    viewModel.rate(Rating.HARD)
+                }
             }
-            RatingButton("Hard", state.rating == Rating.HARD, Modifier.weight(1f)) {
-                viewModel.rate(Rating.HARD)
-            }
-            RatingButton("Good", state.rating == Rating.GOOD, Modifier.weight(1f)) {
-                viewModel.rate(Rating.GOOD)
-            }
-            RatingButton("Easy", state.rating == Rating.EASY, Modifier.weight(1f)) {
-                viewModel.rate(Rating.EASY)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RatingButton("Good", state.rating == Rating.GOOD, Modifier.weight(1f)) {
+                    viewModel.rate(Rating.GOOD)
+                }
+                RatingButton("Easy", state.rating == Rating.EASY, Modifier.weight(1f)) {
+                    viewModel.rate(Rating.EASY)
+                }
             }
         }
 
@@ -358,14 +356,6 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             enabled = state.rating != null,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Next") }
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = "Rated the wrong card? Use Undo review in the top bar.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -452,8 +442,7 @@ private fun SessionComplete(state: ReviewUiState.SessionComplete, onExit: () -> 
         Text(text = "Nothing left to study", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "You have cleared the cards that are due today, and used up the " +
-                "new cards for today. Come back tomorrow.",
+            text = "Come back tomorrow.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

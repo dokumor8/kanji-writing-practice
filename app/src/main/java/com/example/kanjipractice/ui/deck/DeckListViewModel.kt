@@ -12,6 +12,7 @@ import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import com.example.kanjipractice.domain.util.DayBoundary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,13 +26,15 @@ import java.time.ZoneId
 import javax.inject.Inject
 
 data class DeckListUiState(
-    /** Scheduled cards that are due now. */
+    /** Scheduled cards that are due today. */
     val dueReviews: Int = 0,
     /** Never-seen cards that may still be introduced today. */
     val newAvailable: Int = 0,
-    /** Never-seen cards left in the deck overall. */
+    /** Never-seen cards left in the selected sets overall. */
     val newRemainingInDeck: Int = 0,
     val totalCount: Int = 0,
+    /** True when the user has switched every set off. */
+    val nothingSelected: Boolean = false,
     val dailyNewLimit: Int = StudySettings.DEFAULT_DAILY_NEW_LIMIT,
     val introducedToday: Int = 0,
     val modelState: ModelState = ModelState.Unknown,
@@ -56,45 +59,64 @@ class DeckListViewModel @Inject constructor(
 ) : ViewModel() {
 
     /**
-     * The counts are a function of the study day, so the queries are re-run
-     * whenever [refresh] ticks this forward. Without that the deck screen kept the
-     * counts it computed at construction: cards seeded a moment later were
-     * invisible until the app was restarted, and the daily allowance never reset.
+     * The counts are a function of the study day and of which sets are selected,
+     * so they are recomputed whenever either moves. Without that the deck screen
+     * kept whatever it computed at construction.
      */
     private val now = MutableStateFlow(LocalDateTime.now(clock))
 
+    /**
+     * True until the bundled card data has been reconciled. On an upgrade the
+     * first launch inserts a thousand-odd new cards, and starting a session
+     * against a half-populated table would show an arbitrary slice of the deck.
+     */
+    private val syncing = MutableStateFlow(true)
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val counts = combine(
-        // "Due" means due before the end of today's study day, so the number on
-        // this screen is what a session will actually contain.
-        now.flatMapLatest {
-            cardRepository.observeDueReviewCount(DayBoundary.endOfStudyDay(clock, zone))
-        },
-        now.flatMapLatest {
-            reviewLogRepository.observeIntroducedSince(DayBoundary.startOfStudyDay(clock, zone))
-        },
-        cardRepository.observeNewCount(),
-        cardRepository.observeTotalCount(),
-    ) { due, introduced, newCount, total ->
-        Counts(due = due, introducedToday = introduced, newInDeck = newCount, total = total)
-    }
+    private val counts: Flow<Counts> =
+        combine(now, settingsRepository.observeSelectedDeckIds()) { _, deckIds -> deckIds }
+            .flatMapLatest { deckIds ->
+                combine(
+                    // "Due" means due before the end of today's study day, so the
+                    // number here is what a session will actually contain.
+                    cardRepository.observeDueReviewCount(
+                        DayBoundary.endOfStudyDay(clock, zone),
+                        deckIds,
+                    ),
+                    reviewLogRepository.observeIntroducedSince(
+                        DayBoundary.startOfStudyDay(clock, zone)
+                    ),
+                    cardRepository.observeNewCount(deckIds),
+                    cardRepository.observeTotalCount(deckIds),
+                ) { due, introduced, newCount, total ->
+                    Counts(
+                        due = due,
+                        introducedToday = introduced,
+                        newInDeck = newCount,
+                        total = total,
+                        nothingSelected = deckIds.isEmpty(),
+                    )
+                }
+            }
 
     val uiState: StateFlow<DeckListUiState> =
         combine(
             counts,
             settingsRepository.observeDailyNewLimit(),
             recognitionService.modelState,
-        ) { counts, limit, model ->
+            syncing,
+        ) { counts, limit, model, isSyncing ->
             val remainingAllowance = (limit - counts.introducedToday).coerceAtLeast(0)
             DeckListUiState(
                 dueReviews = counts.due,
                 newAvailable = minOf(remainingAllowance, counts.newInDeck),
                 newRemainingInDeck = counts.newInDeck,
                 totalCount = counts.total,
+                nothingSelected = counts.nothingSelected,
                 dailyNewLimit = limit,
                 introducedToday = counts.introducedToday,
                 modelState = model,
-                loading = false,
+                loading = isSyncing,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -104,8 +126,8 @@ class DeckListViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            // First launch: fill the cards table from the bundled deck.
-            deckSeeder.seedIfEmpty()
+            runCatching { deckSeeder.syncDecks() }
+            syncing.value = false
             refresh()
         }
     }
@@ -124,33 +146,11 @@ class DeckListViewModel @Inject constructor(
         now.value = LocalDateTime.now(clock)
     }
 
-    /** Starts (or retries) the one-off Japanese model download. */
-    fun prepareModel() {
-        viewModelScope.launch { runCatching { recognitionService.prepare() } }
-    }
-
-    /**
-     * Deletes the downloaded model and fetches it again. The recovery path when
-     * the model reports as present but recognition does not work.
-     */
-    fun reinstallModel() {
-        viewModelScope.launch { runCatching { recognitionService.reinstallModel() } }
-    }
-
-    fun setDailyNewLimit(limit: Int) {
-        val clamped = StudySettings.coerceDailyNewLimit(limit)
-        viewModelScope.launch { settingsRepository.setDailyNewLimit(clamped) }
-    }
-
-    fun nudgeDailyNewLimit(steps: Int) {
-        val next = uiState.value.dailyNewLimit + steps * StudySettings.DAILY_NEW_LIMIT_STEP
-        setDailyNewLimit(next)
-    }
-
     private data class Counts(
         val due: Int,
         val introducedToday: Int,
         val newInDeck: Int,
         val total: Int,
+        val nothingSelected: Boolean,
     )
 }

@@ -5,7 +5,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.kanjipractice.domain.deck.DeckCatalog
 import com.example.kanjipractice.domain.settings.StudySettings
 import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,8 +21,8 @@ private val Context.studySettingsStore: DataStore<Preferences> by preferencesDat
 )
 
 /**
- * The daily new-card limit lives in DataStore rather than Room: it is a device
- * preference, not deck content, and it must survive a database reset.
+ * Device preferences rather than deck content: they must survive a database
+ * reset, and they are not worth a table.
  */
 @Singleton
 class DataStoreStudySettingsRepository @Inject constructor(
@@ -39,7 +41,35 @@ class DataStoreStudySettingsRepository @Inject constructor(
         }
     }
 
+    override fun observeSelectedDeckIds(): Flow<Set<String>> =
+        context.studySettingsStore.data.map { preferences ->
+            // An empty set means "nothing chosen", which is a legitimate state to
+            // be in; only a preference that was never written falls back to the
+            // default.
+            preferences[SELECTED_DECKS] ?: DeckCatalog.DEFAULT_SELECTED
+        }
+
+    override suspend fun setSelectedDeckIds(ids: Set<String>) {
+        val known = ids.filter { it in DeckCatalog.byId }.toSet()
+        context.studySettingsStore.edit { preferences ->
+            preferences[SELECTED_DECKS] = known
+        }
+    }
+
+    override fun observeDeckDataVersion(): Flow<Int> =
+        context.studySettingsStore.data.map { preferences ->
+            preferences[DECK_DATA_VERSION] ?: 0
+        }
+
+    override suspend fun setDeckDataVersion(version: Int) {
+        context.studySettingsStore.edit { preferences ->
+            preferences[DECK_DATA_VERSION] = version
+        }
+    }
+
     private companion object {
         val DAILY_NEW_LIMIT = intPreferencesKey("daily_new_limit")
+        val SELECTED_DECKS = stringSetPreferencesKey("selected_deck_ids")
+        val DECK_DATA_VERSION = intPreferencesKey("deck_data_version")
     }
 }

@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 interface CardDao {
 
     /**
-     * Cards due before [before], most overdue first.
+     * Cards due before [before], most overdue first, restricted to [deckIds].
      *
      * `before` is the end of the current study day rather than the current
      * instant, so everything due today is available in one sitting instead of
@@ -20,36 +20,69 @@ interface CardDao {
      *
      * Cards that have never been reviewed ([newState]) are deliberately excluded:
      * they are not scheduled, they enter a session only through the daily
-     * new-card allowance, which is what stops a 612-card deck from arriving all
-     * at once.
+     * new-card allowance, which is what stops a large deck from arriving all at
+     * once.
      */
     @Query(
         "SELECT * FROM cards WHERE state <> :newState AND due < :before " +
-            "ORDER BY due ASC, id ASC"
+            "AND deckId IN (:deckIds) ORDER BY due ASC, id ASC"
     )
-    fun observeDueReviews(before: LocalDateTime, newState: Int): Flow<List<CardEntity>>
+    fun observeDueReviews(
+        before: LocalDateTime,
+        newState: Int,
+        deckIds: List<String>,
+    ): Flow<List<CardEntity>>
 
-    @Query("SELECT COUNT(*) FROM cards WHERE state <> :newState AND due < :before")
-    fun observeDueReviewCount(before: LocalDateTime, newState: Int): Flow<Int>
+    @Query(
+        "SELECT COUNT(*) FROM cards WHERE state <> :newState AND due < :before " +
+            "AND deckId IN (:deckIds)"
+    )
+    fun observeDueReviewCount(
+        before: LocalDateTime,
+        newState: Int,
+        deckIds: List<String>,
+    ): Flow<Int>
 
-    /** Never-reviewed cards, in deck order: easier JLPT levels first. */
-    @Query("SELECT * FROM cards WHERE state = :newState ORDER BY jlpt DESC, id ASC LIMIT :limit")
-    suspend fun nextNewCards(limit: Int, newState: Int): List<CardEntity>
+    /** Never-reviewed cards in set order: commonest kanji first. */
+    @Query(
+        "SELECT * FROM cards WHERE state = :newState AND deckId IN (:deckIds) " +
+            "ORDER BY deckSortKey ASC LIMIT :limit"
+    )
+    suspend fun nextNewCards(
+        limit: Int,
+        newState: Int,
+        deckIds: List<String>,
+    ): List<CardEntity>
 
-    @Query("SELECT COUNT(*) FROM cards WHERE state = :newState")
-    fun observeNewCount(newState: Int): Flow<Int>
+    @Query("SELECT COUNT(*) FROM cards WHERE state = :newState AND deckId IN (:deckIds)")
+    fun observeNewCount(newState: Int, deckIds: List<String>): Flow<Int>
 
-    @Query("SELECT COUNT(*) FROM cards")
-    fun observeTotalCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM cards WHERE deckId IN (:deckIds)")
+    fun observeTotalCount(deckIds: List<String>): Flow<Int>
 
-    @Query("SELECT * FROM cards ORDER BY jlpt DESC, due ASC, id ASC")
-    fun observeAll(): Flow<List<CardEntity>>
+    @Query("SELECT * FROM cards WHERE deckId IN (:deckIds) ORDER BY deckId ASC, deckSortKey ASC")
+    fun observeAll(deckIds: List<String>): Flow<List<CardEntity>>
+
+    /** Card counts per set, for the settings screen. */
+    @Query("SELECT deckId, COUNT(*) AS count FROM cards WHERE deckId IS NOT NULL GROUP BY deckId")
+    fun observeDeckCounts(): Flow<List<DeckCount>>
 
     @Query("SELECT * FROM cards WHERE id = :id")
     suspend fun getById(id: Long): CardEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(cards: List<CardEntity>)
+    /**
+     * Seeds cards that are not present yet and leaves existing rows untouched,
+     * so a re-seed can never overwrite somebody's review history.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertMissing(cards: List<CardEntity>): List<Long>
+
+    /** Set membership is data, not progress, so it is assigned separately. */
+    @Query("UPDATE cards SET deckId = :deckId, deckSortKey = :sortKey WHERE id = :id")
+    suspend fun assignDeck(id: Long, deckId: String, sortKey: Int)
+
+    @Query("SELECT COUNT(*) FROM cards WHERE deckId IS NULL")
+    suspend fun countUnassigned(): Int
 
     @Update
     suspend fun update(card: CardEntity)
@@ -57,3 +90,6 @@ interface CardDao {
     @Query("SELECT COUNT(*) FROM cards")
     suspend fun count(): Int
 }
+
+/** Row type for the per-set card counts. */
+data class DeckCount(val deckId: String, val count: Int)

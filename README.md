@@ -6,8 +6,13 @@ character on a touch canvas; ML Kit recognises the whole character and tells you
 whether you got it. FSRS v6 schedules the reviews. Everything works offline once
 the recognition model has been downloaded once, and there are no ads.
 
-It is an implementation of `../planning/kanji_app.txt`, revised after a round of
-hands-on testing on a real phone (see "What changed in 1.1" through "1.3").
+It ships the **2136 Jōyō kanji** and **hiragana and katakana**, in nine card sets
+you choose between in settings. Stroke-order diagrams — for kana as well as kanji
+— come from KanjiVG.
+
+It began as an implementation of `../planning/kanji_app.txt` and has been revised
+after each round of hands-on testing on a real phone (see "What changed in 1.1"
+through "2.0").
 
 ## The design in one paragraph
 
@@ -48,13 +53,28 @@ only the correct character is not enough to judge your own attempt.
                                      including the queue copy a lapse appended
 ```
 
+## Card sets
+
+Nine sets, chosen in settings, all off by default except the kanji:
+
+| Set | Cards |
+| --- | --- |
+| Hiragana | 71 (46 basic + 20 voiced + 5 semi-voiced) |
+| Katakana | 71 |
+| Kanji 1–6 | 300 each, commonest first |
+| Kanji 7 | 336, the rest of the 2136 Jōyō kanji |
+
+Sessions draw only from the selected sets. The kanji are ordered by KANJIDIC's
+newspaper frequency rank, which is why set 1 opens with 日, 一, 国, 会, 人 rather
+than with whatever a textbook happens to start on.
+
 ## Study limits
 
 New cards are **not** dumped in all at once. A session is built as:
 
 1. every card due before the **end of the current study day**, then
-2. never-seen cards, up to whatever is left of the **daily new-card allowance**
-   (20/day by default, adjustable on the deck screen in steps of 5).
+2. never-seen cards from the selected sets, up to whatever is left of the
+   **daily new-card allowance** (20/day by default, adjustable in settings).
 
 A study day runs from **03:00 to 03:00**, so a session started at 00:30 still
 belongs to the previous day rather than starting a fresh one mid-sitting. Cards
@@ -81,10 +101,63 @@ export ANDROID_USER_HOME=/common/cr/programming/mobile/video_player/.buildcache/
 `/common/cr/programming/mobile/video_player/.buildcache/android-sdk` (compileSdk 35,
 build-tools 34/35, both already installed). It is git-ignored, as usual.
 
-To install: `adb install -r app/build/outputs/apk/debug/app-debug.apk`. The debug
-APK is ~44 MB, almost all of it ML Kit's on-device recognition engine. The database
-schema has not changed since 1.0, so installing over an earlier build keeps your
-existing progress.
+To install: `adb install -r <apk>`. The debug APK is ~47 MB and the release APK
+~43 MB, almost all of it ML Kit's on-device recognition engine plus the bundled
+stroke diagrams.
+
+The database schema changes in 2.0, through a Room auto-migration that adds two
+columns; installing over an earlier build keeps your existing progress.
+
+## Publishing a release
+
+```bash
+./gradlew :app:assembleRelease      # -> app/build/outputs/apk/release/app-release.apk
+```
+
+### The signing key
+
+Release builds are signed with a key that is **not in this repository**. It is
+read from `keystore.properties` (git-ignored) locally, or from the environment in
+CI:
+
+| Property | Environment variable |
+| --- | --- |
+| `storeFile` | `KEYSTORE_FILE` |
+| `storePassword` | `KEYSTORE_PASSWORD` |
+| `keyAlias` | `KEY_ALIAS` |
+| `keyPassword` | `KEY_PASSWORD` |
+
+Without them the build still runs but produces an **unsigned** APK that cannot be
+installed.
+
+**Android will not install an update signed with a different key than the
+installed app.** Losing the keystore means the next release cannot be installed
+over the previous one — the only way out is to uninstall, which takes the review
+history with it. Back up the keystore and its passwords somewhere you will still
+have them in a year.
+
+A key was generated for this project at
+`../.buildcache/kanji-release.jks` (outside the repository) and its passwords are
+in `keystore.properties`. If you would rather use your own, replace both.
+
+### Cutting a release on GitHub
+
+Add the four values above as repository secrets, then:
+
+```bash
+base64 -w0 /path/to/kanji-release.jks     # -> KEYSTORE_BASE64
+git tag v2.0.0 && git push origin v2.0.0
+```
+
+`.github/workflows/release.yml` runs the tests, restores the key, builds, verifies
+the APK really is signed, and attaches it to a GitHub Release. It deliberately
+**fails rather than falling back** to another key when `KEYSTORE_BASE64` is
+missing, because a release signed with the wrong key is worse than no release.
+`.github/workflows/ci.yml` runs the tests and builds a debug APK on every push.
+
+The release build does **not** enable R8 shrinking: it needs keep rules for ML Kit,
+Room and Hilt, and a sideloaded app gains little from the size win against the
+risk of a rule missing something at runtime.
 
 ## Project layout
 
@@ -101,7 +174,41 @@ existing progress.
 | `.../ui/review/` | The review state machine and screen. |
 | `.../ui/components/` | `DrawingCanvas`, `StrokeOrderView`, `StrokeHintDialog`. |
 | `fsrs/` | Vendored FSRS v6, a dependency-free Kotlin JVM module. |
-| `tools/build_assets.py` | Regenerates `kanji.json` and the bundled SVGs from their upstream sources. |
+| `.../domain/deck/DeckCatalog.kt` | The nine card sets, their ids and names. |
+| `.../ui/settings/` | Card-set selection, the daily limit and the model. |
+| `tools/build_assets.py` | Regenerates the card data and the bundled SVGs from their upstream sources. |
+| `.github/workflows/` | CI on every push; a signed APK on every `v*` tag. |
+
+## What changed in 2.0
+
+1. **The whole Jōyō set, plus kana.** 2136 kanji where there were 612, and 71
+   hiragana + 71 katakana (basic, voiced and semi-voiced). Kana prompts are
+   romanisation. The two ambiguous pairs are spelled `di`/`du` rather than
+   `ji`/`zu` so that a prompt has exactly one answer.
+
+2. **Card sets, and a settings screen.** Nine sets: hiragana, katakana, and the
+   kanji split into six sets of 300 with a seventh of 336. Kanji are ordered by
+   frequency, so the commonest arrive first. Settings holds the set selection,
+   the daily new-card limit (moved off the deck screen) and the handwriting model
+   (also moved), which is where setup belongs.
+
+3. **An upgrade keeps your progress.** Set membership is stored on the card but
+   assigned separately from insertion, so re-seeding uses a plain INSERT that
+   skips existing rows and can never overwrite FSRS state. The schema change is a
+   Room auto-migration adding two nullable columns. Every one of the 612 cards in
+   the old deck is a Jōyō kanji, so nothing studied became unreachable — they
+   simply move into the new sets.
+
+4. **Rating buttons that fit.** Four labels across a phone clipped "Again" to
+   "Agai"; they are now two rows of two.
+
+5. **Less explaining.** The app had a habit of narrating itself — "Daily
+   new-card limit reached. This is what keeps the deck from burying you." Those
+   asides are gone. What is left is either a fact ("Hint used"), an instruction
+   ("Not quite - try again") or an error with its cause.
+
+6. **A signed release build and CI.** `assembleRelease` produces a signed APK,
+   and tagging a commit publishes it. See "Publishing a release".
 
 ## What changed in 1.1
 
@@ -274,7 +381,7 @@ Everything in the plan is implemented, except where testing changed the design
 
 ## Tests
 
-140 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
+147 tests, no device required (`./gradlew :fsrs:test :app:testDebugUnitTest`).
 
 * **FSRS (17)** — replays published reference vectors from the fsrs-rs
   implementation's own test suite, then asserts the invariants the algorithm is
@@ -292,10 +399,14 @@ Everything in the plan is implemented, except where testing changed the design
   the daily allowance, and the recognition-failure path.
 * **Deck screen (12)** — the regression test for the "nothing to review" bug (a
   deck seeded *after* the screen loads must be visible without a restart), the
-  allowance arithmetic, and the settings stepper's clamps.
-* **Bundled data (13)** — parses every one of the 612 bundled SVGs and asserts
+  allowance arithmetic, and that only cards from selected sets are counted, with
+  "nothing selected" reported rather than silently ignored.
+* **Bundled data and diagrams (20)** — parses all 2278 bundled SVGs and asserts
   each is well formed, has one stroke number per stroke, and belongs to a card;
-  and validates the deck itself.
+  and validates the card data itself: 2136 Jōyō kanji in 7 sets, 71 + 71 kana,
+  unique characters and sort keys, set ids that exist in the catalog, kana
+  romanisations that are unambiguous, and example words that never leak their own
+  answer.
 * **Parsers, scheduling and settings (57)** — SVG path-data commands, KanjiVG
   extraction, stroke normalisation, the FSRS-to-due-date policy (8, including that
   a lapse is due immediately and a success is not), study-day boundaries across
@@ -312,7 +423,8 @@ from `jamsinclair/open-anki-jlpt-decks` (MIT).
 
 There is no KVM in this environment and no emulator or system image installed, so
 the app cannot be launched here. What **is** verified is that it compiles,
-packages into a debug APK, and that all 140 unit tests pass. Untested at runtime:
+packages into a debug APK, and that all 147 unit tests pass. Untested at runtime:
 ML Kit model download and recognition accuracy on real handwriting (including
-whether recognition is working again on your device — that is the whole point of
-this build), Compose layout at real screen sizes, and Room persistence on device.
+Compose layout at real screen sizes, Room persistence on device, and the 1 → 2
+auto-migration (the SQL is derived and checked by Room at build time, but it has
+never actually run against a populated database here).

@@ -91,6 +91,8 @@ class ReviewViewModelTest {
         kunyomi = null,
         exampleWord = null,
         jlpt = 5,
+        deckId = "kanji-1",
+        deckSortKey = id.toInt(),
         stability = 5.0,
         difficulty = 5.0,
         due = now.minusDays(1),
@@ -108,6 +110,8 @@ class ReviewViewModelTest {
         kunyomi = null,
         exampleWord = null,
         jlpt = 5,
+        deckId = "kanji-1",
+        deckSortKey = id.toInt(),
         due = now,
     )
 

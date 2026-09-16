@@ -13,20 +13,30 @@ contributors, licensed under
 Each file carries its own copyright header. They are redistributed here under the
 same licence.
 
+KanjiVG covers kana as well as kanji, which is why the hiragana and katakana sets
+get the same stroke-order diagrams as the kanji.
+
 ## Kanjidic2 — meanings, readings, JLPT levels
 
 The `meaning`, `onyomi`, `kunyomi` and `jlpt` fields of
-`app/src/main/assets/kanji.json` derive from **KANJIDIC2**, © Electronic
-Dictionary Research and Development Group, licensed under
+`app/src/main/assets/kanji.json` — the 2136 Jōyō kanji — derive from
+**KANJIDIC2**, © Electronic Dictionary Research and Development Group, licensed under
 [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 They were extracted from [davidluzgouveia/kanji-data](https://github.com/davidluzgouveia/kanji-data)
 (MIT licence, © 2019 David Gouveia), which is a JSON repackaging of KANJIDIC2.
 
+## Kana
+
+`app/src/main/assets/kana.json` is not derived from an external source: the
+gojūon table, its romanisation and the voiced and semi-voiced forms are written
+out in `tools/build_assets.py`. The romanisation follows Hepburn, except that
+ぢ/づ and ヂ/ヅ are spelled `di`/`du` so that every prompt has exactly one answer.
+
 ## JLPT vocabulary — example words
 
 The `exampleWord` field is derived from the vocabulary lists in
-[jamsinclair/open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks),
-MIT licence, © 2020 Jamie Sinclair.
+[jamsinclair/open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks)
+(N5 through N1), MIT licence, © 2020 Jamie Sinclair.
 
 ## FSRS — scheduling algorithm
 

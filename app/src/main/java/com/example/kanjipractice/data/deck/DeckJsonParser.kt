@@ -3,11 +3,11 @@ package com.example.kanjipractice.data.deck
 import org.json.JSONArray
 
 /**
- * Parses the bundled deck.
+ * Parses a bundled card set.
  *
  * `org.json` is used rather than a serialization library because it ships with
- * Android and the schema is three fields wide; a JVM copy is on the unit-test
- * classpath so this parser is covered by ordinary tests.
+ * Android and the schema is a handful of fields wide; a JVM copy is on the
+ * unit-test classpath so this parser is covered by ordinary tests.
  */
 object DeckJsonParser {
 
@@ -28,6 +28,8 @@ object DeckJsonParser {
                 kunyomi = obj.optStringOrNull("kunyomi"),
                 exampleWord = obj.optStringOrNull("exampleWord"),
                 jlpt = obj.optInt("jlpt", 0),
+                deckId = obj.getString("deck"),
+                sortKey = obj.getInt("sortKey"),
             )
         }
         return cards
