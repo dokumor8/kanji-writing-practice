@@ -2,6 +2,7 @@ package com.example.kanjipractice.domain.recognition
 
 import android.content.Context
 import android.util.Log
+import com.example.kanjipractice.domain.deck.ScriptProfile
 import com.example.kanjipractice.domain.model.Stroke
 import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
@@ -21,7 +22,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * ML Kit Digital Ink Recognition, Japanese model (plan, section 5.2).
+ * ML Kit Digital Ink Recognition (plan, section 5.2).
+ *
+ * Which language model to use comes from [ScriptProfile] and never from a literal
+ * in this file. It was a literal once, which meant the Chinese app silently
+ * downloaded and used the Japanese model: every character it could recognise was
+ * one that exists in Japanese, and 你 could never be recognised at all.
  *
  * The model is downloaded on first use and is fully offline afterwards, so only
  * the download needs the network.
@@ -29,6 +35,7 @@ import javax.inject.Singleton
 @Singleton
 class MlKitRecognitionService @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val script: ScriptProfile,
 ) : RecognitionService {
 
     private val _modelState = MutableStateFlow<ModelState>(ModelState.Unknown)
@@ -140,8 +147,9 @@ class MlKitRecognitionService @Inject constructor(
     }
 
     private fun buildModel(): DigitalInkRecognitionModel {
-        val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag(LANGUAGE_TAG)
-            ?: error("ML Kit has no digital-ink model for language tag '$LANGUAGE_TAG'")
+        val tag = script.recognitionLanguageTag
+        val identifier = DigitalInkRecognitionModelIdentifier.fromLanguageTag(tag)
+            ?: error("ML Kit has no digital-ink model for language tag '$tag'")
         return DigitalInkRecognitionModel.builder(identifier).build()
     }
 
@@ -172,9 +180,6 @@ class MlKitRecognitionService @Inject constructor(
 
     private companion object {
         const val TAG = "MlKitRecognition"
-
-        /** Japanese. The app is a kanji trainer, so this is the only model. */
-        const val LANGUAGE_TAG = "ja"
 
         /** Simulated sampling interval between recorded points. */
         const val TIME_STEP_MILLIS = 10L

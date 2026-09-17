@@ -6,6 +6,8 @@ import com.example.fsrs.Fsrs
 import com.example.kanjipractice.data.DataStoreStudySettingsRepository
 import com.example.kanjipractice.data.DeckInitializer
 import com.example.kanjipractice.data.DeckSeeder
+import com.example.kanjipractice.domain.AppScript
+import com.example.kanjipractice.domain.deck.ScriptProfile
 import com.example.kanjipractice.data.DefaultCardRepository
 import com.example.kanjipractice.data.DefaultReviewLogRepository
 import com.example.kanjipractice.data.db.CardDao
@@ -54,6 +56,15 @@ object AppModule {
     @Provides
     @Singleton
     fun provideZoneId(): ZoneId = ZoneId.systemDefault()
+
+    /**
+     * The flavour's script profile: language model, asset layout, deck list and
+     * credits. Every value that differs between the Japanese and Chinese apps
+     * comes from here, so nothing has to guess which app it is.
+     */
+    @Provides
+    @Singleton
+    fun provideScriptProfile(): ScriptProfile = AppScript
 
     @Provides
     @Singleton

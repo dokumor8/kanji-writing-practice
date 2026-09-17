@@ -183,6 +183,7 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
             card = state.card,
             diagram = state.diagram,
             onDismiss = viewModel::dismissHint,
+            onGiveUp = viewModel::giveUp,
         )
     }
 }

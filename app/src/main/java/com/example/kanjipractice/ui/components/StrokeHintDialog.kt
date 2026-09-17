@@ -41,11 +41,18 @@ fun StrokeHintDialog(
     card: CardEntity,
     diagram: StrokeDiagram,
     onDismiss: () -> Unit,
+    onGiveUp: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
+        },
+        // The way out when the recogniser will not accept a drawing the user
+        // cannot improve. Without it the only route onwards runs through
+        // succeeding, so a character the model dislikes blocks the session.
+        dismissButton = {
+            TextButton(onClick = onGiveUp) { Text("Give up") }
         },
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {

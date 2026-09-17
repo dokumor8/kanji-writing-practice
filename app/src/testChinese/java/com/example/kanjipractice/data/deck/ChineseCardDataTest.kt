@@ -15,6 +15,15 @@ class ChineseCardDataTest {
     }
 
     @Test
+    fun usesTheSimplifiedChineseRecognitionModel() {
+        // ML Kit tags Chinese by script and region rather than zh-Hans.
+        assertEquals(
+            "zh-Hani-CN",
+            com.example.kanjipractice.domain.AppScript.recognitionLanguageTag,
+        )
+    }
+
+    @Test
     fun aWiderCandidateWindowIsAccepted() {
         // A false reject blocks the card outright; a false accept costs one tap on
         // "Again". For this recogniser that trade is worth the wider window.

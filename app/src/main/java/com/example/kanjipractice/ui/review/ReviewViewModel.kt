@@ -78,7 +78,7 @@ class ReviewViewModel @Inject constructor(
         val cardBefore: CardEntity,
         val logId: Long,
         /** The screen to put the user back on, so they can just re-rate. */
-        val stateBefore: ReviewUiState.Success,
+        val stateBefore: ReviewUiState,
         val hintCount: Int,
         val retryCount: Int,
         /** True when this review appended a copy of the card to the queue. */
@@ -293,6 +293,20 @@ class ReviewViewModel @Inject constructor(
         else -> Rating.GOOD
     }
 
+    /**
+     * Abandons the card.
+     *
+     * The recogniser rejecting a drawing the user cannot improve is a dead end
+     * otherwise: every other route to the next card runs through getting it
+     * accepted. Giving up rates the card Again and moves on, which is also the
+     * honest record of what happened.
+     */
+    fun giveUp() {
+        val state = _uiState.value as? ReviewUiState.Prompt ?: return
+        if (state.busy) return
+        viewModelScope.launch { persistAndAdvance(state, Rating.AGAIN) }
+    }
+
     /** Stores the rating on the success screen; Next is what commits it. */
     fun rate(rating: Rating) {
         val state = _uiState.value as? ReviewUiState.Success ?: return
@@ -335,13 +349,19 @@ class ReviewViewModel @Inject constructor(
             position = record.cardIndex
             hintCount = record.hintCount
             retryCount = record.retryCount
-            _uiState.value = record.stateBefore.copy(rating = null, canUndo = false)
+            _uiState.value = when (val restored = record.stateBefore) {
+                is ReviewUiState.Success -> restored.copy(rating = null, canUndo = false)
+                // Giving the drawing back, with the hint closed so it does not
+                // immediately reopen.
+                is ReviewUiState.Prompt -> restored.copy(hintVisible = false, canUndo = false)
+                else -> restored
+            }
         }
     }
 
     // --------------------------------------------------------------- plumbing
 
-    private suspend fun persistAndAdvance(state: ReviewUiState.Success, rating: Rating) {
+    private suspend fun persistAndAdvance(state: ReviewUiState, rating: Rating) {
         val card = queue.getOrNull(position)
         if (card == null) {
             _uiState.value = ReviewUiState.SessionComplete(canUndo = undoRecord != null)

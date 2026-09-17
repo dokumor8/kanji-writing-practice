@@ -20,6 +20,11 @@ class JapaneseCardDataTest {
     private fun asset(name: String) = File("src/japanese/assets/$name")
 
     @Test
+    fun usesTheJapaneseRecognitionModel() {
+        assertEquals("ja", com.example.kanjipractice.domain.AppScript.recognitionLanguageTag)
+    }
+
+    @Test
     fun onlyTheTopCandidateIsAccepted() {
         // The Japanese model is accurate enough that a wrong character coming top
         // is a real error; this is the setting that caught 玉 for 主.
