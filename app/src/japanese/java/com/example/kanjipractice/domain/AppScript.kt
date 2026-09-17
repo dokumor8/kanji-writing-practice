@@ -10,6 +10,8 @@ object AppScript : ScriptProfile {
     override val strokeAssetDir = "kanjivg"
     override val levelPrefix: String? = "N"
 
+    override val acceptedRanks = 1
+
     override val licences: List<LicenceEntry> = listOf(
         LicenceEntry(
             title = "KanjiVG - stroke order diagrams",

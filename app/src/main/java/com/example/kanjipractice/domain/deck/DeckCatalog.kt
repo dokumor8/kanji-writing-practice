@@ -38,6 +38,18 @@ interface ScriptProfile {
     val levelPrefix: String?
 
     /**
+     * How many of the recogniser's candidates count as correct.
+     *
+     * One means only its first choice is accepted. That is the right setting for
+     * the Japanese model, which is accurate enough that a wrong character coming
+     * top is a real error worth catching. The Chinese model is a different model
+     * over a much larger, denser character set and does not earn the same trust,
+     * so it gets the original top-three rule; a false accept costs the user one
+     * tap on "Again", whereas a false reject blocks the card entirely.
+     */
+    val acceptedRanks: Int
+
+    /**
      * Who to credit for the bundled material. Flavour-specific because the two
      * apps ship entirely different character data under entirely different
      * licences, and crediting KanjiVG in the Chinese app would be both wrong and

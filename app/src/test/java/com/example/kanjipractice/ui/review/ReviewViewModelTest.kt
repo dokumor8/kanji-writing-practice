@@ -206,23 +206,13 @@ class ReviewViewModelTest {
         assertTrue(state.message != null)
     }
 
-    @Test
-    fun onlyTheModelsFirstChoiceCounts() {
-        // 玉 ranked above 主 must not pass: accepting a wrong character is worse
-        // than asking the user to draw again.
-        val vm = viewModel(listOf(newCard(1, "\u4E3B")))
-        recognition.candidates = listOf("\u7389", "\u4E3B", "\u738B")
-
-        vm.onStrokeFinished(stroke())
-        vm.submit()
-
-        val state = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
-        assertEquals(1, state.retryCount, "a second-rank match must not pass")
-        assertTrue(state.message != null, "and the user has to be told")
-    }
+    // How wide the accepted window is belongs to the recogniser rather than to the
+    // state machine, so it is tested in RecognitionMatcherTest with explicit ranks
+    // and pinned per flavour. Hard-coding an outcome here would make this suite
+    // disagree with one of the two apps.
 
     @Test
-    fun aTopOneMatchReachesTheSuccessScreen() {
+    fun aTopRankedMatchReachesTheSuccessScreen() {
         val vm = viewModel(listOf(newCard(1, "\u65E5")))
         recognition.candidates = listOf("\u65E5", "\u66F0")
 

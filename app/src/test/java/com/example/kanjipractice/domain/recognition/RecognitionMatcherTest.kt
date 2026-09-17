@@ -9,21 +9,33 @@ import kotlin.test.assertTrue
 class RecognitionMatcherTest {
 
     @Test
-    fun onlyTheFirstCandidateIsAccepted() {
-        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u99C5", "\u9A45")))
+    fun topOneAcceptsOnlyTheFirstCandidate() {
+        assertTrue(RecognitionMatcher.isCorrect("\u99C5", listOf("\u99C5", "\u9A45"), 1))
     }
 
     @Test
-    fun aMatchFurtherDownTheListIsRejected() {
+    fun topOneRejectsAMatchFurtherDownTheList() {
         // 玉 must not pass for 主: the recogniser ranks near-identical characters
-        // adjacently, so "top three" accepted visibly wrong drawings.
-        assertFalse(RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u4E3B")))
-        assertEquals(1, RecognitionMatcher.ACCEPTED_RANKS)
+        // adjacently, so accepting more than one let visibly wrong drawings pass.
+        assertFalse(RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u4E3B"), 1))
+    }
+
+    @Test
+    fun aWiderWindowAcceptsTheSameMatch() {
+        // Which setting a flavour uses is its own choice; see AppScript.acceptedRanks.
+        assertTrue(RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u4E3B"), 3))
+    }
+
+    @Test
+    fun aMatchOutsideTheWindowIsStillRejected() {
+        assertFalse(
+            RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u738B", "\u4E3B"), 2)
+        )
     }
 
     @Test
     fun nothingDrawnNeverMatches() {
-        assertFalse(RecognitionMatcher.isCorrect("\u99C5", emptyList()))
+        assertFalse(RecognitionMatcher.isCorrect("\u99C5", emptyList(), 3))
     }
 
     @Test

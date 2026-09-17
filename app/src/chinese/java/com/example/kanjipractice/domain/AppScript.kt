@@ -14,6 +14,8 @@ object AppScript : ScriptProfile {
     override val strokeAssetDir = "strokes"
     override val levelPrefix: String? = "HSK "
 
+    override val acceptedRanks = 3
+
     override val licences: List<LicenceEntry> = listOf(
         LicenceEntry(
             title = "Stroke order data",

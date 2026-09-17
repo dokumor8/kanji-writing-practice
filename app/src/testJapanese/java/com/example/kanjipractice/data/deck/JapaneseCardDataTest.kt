@@ -20,6 +20,13 @@ class JapaneseCardDataTest {
     private fun asset(name: String) = File("src/japanese/assets/$name")
 
     @Test
+    fun onlyTheTopCandidateIsAccepted() {
+        // The Japanese model is accurate enough that a wrong character coming top
+        // is a real error; this is the setting that caught 玉 for 主.
+        assertEquals(1, com.example.kanjipractice.domain.AppScript.acceptedRanks)
+    }
+
+    @Test
     fun theJoyoDeckIsComplete() {
         assertEquals(2136, kanji.size)
     }

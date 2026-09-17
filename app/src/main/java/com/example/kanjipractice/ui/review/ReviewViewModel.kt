@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.data.db.CardEntity
+import com.example.kanjipractice.domain.AppScript
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.recognition.RecognitionMatcher
 import com.example.kanjipractice.domain.recognition.RecognitionService
@@ -215,7 +216,12 @@ class ReviewViewModel @Inject constructor(
                 return@launch
             }
 
-            if (RecognitionMatcher.isCorrect(state.card.character, candidates)) {
+            if (RecognitionMatcher.isCorrect(
+                    target = state.card.character,
+                    candidates = candidates,
+                    acceptedRanks = AppScript.acceptedRanks,
+                )
+            ) {
                 _uiState.value = ReviewUiState.Success(
                     card = state.card,
                     diagram = state.diagram,
@@ -230,9 +236,14 @@ class ReviewViewModel @Inject constructor(
             } else {
                 retryCount++
                 val current = _uiState.value as? ReviewUiState.Prompt ?: return@launch
+                val read = RecognitionMatcher.bestCandidate(candidates)
+                // Naming what the recogniser saw turns "wrong" into something the
+                // user can act on, and is the only way to diagnose a character
+                // the model will not accept from a distance.
+                Log.i(TAG, "Rejected " + state.card.character + ", best candidate was " + read)
                 setPromptMessage(
                     current.copy(retryCount = retryCount, strokes = strokes),
-                    MESSAGE_NOT_QUITE,
+                    if (read.isNullOrBlank()) MESSAGE_NOT_QUITE else "Not quite - I read that as " + read,
                     clearAfterMillis = TRANSIENT_MESSAGE_MILLIS,
                 )
             }

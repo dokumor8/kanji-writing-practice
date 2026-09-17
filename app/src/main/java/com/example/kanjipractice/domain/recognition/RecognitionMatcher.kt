@@ -1,22 +1,25 @@
 package com.example.kanjipractice.domain.recognition
 
+import com.example.kanjipractice.domain.AppScript
+
 /**
- * Decides whether a drawing counts as the target character (plan, section 5.3).
+ * Decides whether a drawing counts as the target character.
  *
- * **Only the model's first choice counts.** An earlier version accepted the top
- * three candidates, which turned out to be far too forgiving: 玉 passed for 主,
- * because the two are near-identical and the recogniser ranks them adjacently.
- * Accepting a wrong character as correct is worse than occasionally making the
- * user draw again -- and the "Again" button on the result screen is there for the
- * false positives that still slip through.
+ * How many candidates are accepted is a property of the recogniser rather than of
+ * this rule, and the two models differ: see [AppScript.acceptedRanks]. The
+ * Japanese model runs on top-one, because a wrong character coming top there is a
+ * real error worth catching. The Chinese model is a different model over a much
+ * larger, denser character set, and a false reject blocks the card outright,
+ * whereas a false accept costs one tap on "Again".
  */
 object RecognitionMatcher {
 
-    const val ACCEPTED_RANKS = 1
+    fun isCorrect(
+        target: String,
+        candidates: List<String>,
+        acceptedRanks: Int = AppScript.acceptedRanks,
+    ): Boolean = target in candidates.take(acceptedRanks)
 
-    fun isCorrect(target: String, candidates: List<String>): Boolean =
-        target in candidates.take(ACCEPTED_RANKS)
-
-    /** The best candidate, shown on the success screen for transparency. */
+    /** The best candidate, shown to the user so a rejection is explicable. */
     fun bestCandidate(candidates: List<String>): String? = candidates.firstOrNull()
 }
