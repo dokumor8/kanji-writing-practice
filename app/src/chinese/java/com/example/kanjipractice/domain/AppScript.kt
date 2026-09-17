@@ -6,6 +6,11 @@ import com.example.kanjipractice.domain.deck.ScriptProfile
  * The Chinese flavour: simplified characters, recognised with ML Kit's
  * zh-Hani-CN model. Note that ML Kit tags Chinese by script and region rather
  * than with zh-Hans/zh-Hant.
+ *
+ * Only the recogniser's top candidate is accepted, same as the Japanese app. A
+ * wider window was tried while this app was still mistakenly using the Japanese
+ * model; with the right model it is not needed, and a narrow window is what
+ * catches the recogniser accepting a character the user did not draw.
  */
 object AppScript : ScriptProfile {
     override val recognitionLanguageTag = "zh-Hani-CN"
@@ -14,7 +19,7 @@ object AppScript : ScriptProfile {
     override val strokeAssetDir = "strokes"
     override val levelPrefix: String? = "HSK "
 
-    override val acceptedRanks = 3
+    override val acceptedRanks = 1
 
     override val licences: List<LicenceEntry> = listOf(
         LicenceEntry(

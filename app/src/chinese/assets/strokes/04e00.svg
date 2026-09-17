@@ -2,9 +2,9 @@
 <!-- Generated from Make Me a Hanzi stroke medians. See ARPHICPL.TXT. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1016 1000">
 <g id="StrokePaths_04e00">
-  <path d="M 135 521 C 147.0 524.5 157.7 543.5 207.0 542.0 C 256.3 540.5 325.3 522.3 431.0 512.0 C 536.7 501.7 757.2 479.8 841.0 480.0 C 924.8 480.2 918.5 507.5 934.0 513.0"/>
+  <path d="M 135 521 C 147 524 158 544 207 542 C 256 540 325 522 431 512 C 537 502 757 480 841 480 C 925 480 918 508 934 513"/>
 </g>
 <g id="StrokeNumbers_04e00">
-  <text transform="matrix(1 0 0 1 153.0 491.0)">1</text>
+  <text transform="matrix(1 0 0 1 153 491)">1</text>
 </g>
 </svg>

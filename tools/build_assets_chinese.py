@@ -97,8 +97,10 @@ def smooth(median_pts):
         p3 = pts[i + 2] if i + 2 < len(pts) else p2
         c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
         c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
-        d += (f' C {c1[0]:.1f} {c1[1]:.1f} {c2[0]:.1f} {c2[1]:.1f}'
-              f' {p2[0]:.1f} {p2[1]:.1f}')
+        # Whole units: the view box is about a thousand units across, so a
+        # decimal place is a tenth of a pixel and only costs bytes.
+        d += (f' C {c1[0]:.0f} {c1[1]:.0f} {c2[0]:.0f} {c2[1]:.0f}'
+              f' {p2[0]:.0f} {p2[1]:.0f}')
     return d
 
 
@@ -117,7 +119,7 @@ def write_svg(path, character, flipped, box):
         x, y = median[0]
         nx = min(max(x + 18, 20), box['width'] - 40)
         ny = min(max(y - 30, 40), box['height'] - 20)
-        parts.append(f'  <text transform="matrix(1 0 0 1 {nx:.1f} {ny:.1f})">{i}</text>')
+        parts.append(f'  <text transform="matrix(1 0 0 1 {nx:.0f} {ny:.0f})">{i}</text>')
     parts.append('</g>')
     parts.append('</svg>')
     open(path, 'w', encoding='utf-8').write('\n'.join(parts) + '\n')

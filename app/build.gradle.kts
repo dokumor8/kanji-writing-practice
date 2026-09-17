@@ -43,6 +43,16 @@ android {
         targetSdk = 35
         versionCode = 10
         versionName = "2.2.0"
+
+        ndk {
+            // ML Kit's recognition engine is a native library, and it ships one
+            // per CPU architecture: about 29 MB of the 42 MB APK is four copies
+            // of libdigitalink.so. x86 and x86_64 exist only for emulators, which
+            // this app is not distributed for, so they are dropped. arm64-v8a
+            // covers every phone from roughly 2017 on; armeabi-v7a is kept for
+            // older ones at a cost of 4.5 MB.
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     /**

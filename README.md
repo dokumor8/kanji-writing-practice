@@ -121,12 +121,52 @@ land in `app/build/outputs/apk/<flavour>/<buildType>/`.
 `/common/cr/programming/mobile/video_player/.buildcache/android-sdk` (compileSdk 35,
 build-tools 34/35, both already installed). It is git-ignored, as usual.
 
-To install: `adb install -r <apk>`. The debug APK is ~47 MB and the release APK
-~43 MB, almost all of it ML Kit's on-device recognition engine plus the bundled
-stroke diagrams.
+To install: `adb install -r <apk>`. The release APK is ~24 MB; see "App size".
+
+**The APKs are built for `arm64-v8a` and `armeabi-v7a` only.** ML Kit's
+recognition engine is a native library and Google ships one copy per CPU
+architecture; x86 and x86_64 exist for emulators, which this app is not
+distributed for. That one filter is most of the size reduction. If you ever want
+to run it on an emulator, add the ABI back in `app/build.gradle.kts`.
 
 The database schema changes in 2.0, through a Room auto-migration that adds two
 columns; installing over an earlier build keeps your existing progress.
+
+## App size
+
+The release APKs are around 24 MB, down from 42 MB. Where it goes:
+
+| | Chinese | Japanese |
+| --- | --- | --- |
+| `libdigitalink.so` (arm64-v8a) | 6.9 MB | 6.9 MB |
+| `libdigitalink.so` (armeabi-v7a) | 4.5 MB | 4.5 MB |
+| dex (code) | 8.6 MB | 8.6 MB |
+| stroke diagrams | 2.9 MB | 3.7 MB |
+| resources and everything else | ~1.1 MB | ~1.1 MB |
+
+Nearly 30 MB of the original APK was **four copies of ML Kit's native recognition
+library**, one per CPU architecture. Two of those were for emulators, so
+`abiFilters` drops them; that alone is a 42% cut with no runtime risk at all.
+
+Two further reductions are available, neither taken here:
+
+* **Drop `armeabi-v7a`** as well, worth about 4.5 MB. Every phone from roughly
+  2017 on is 64-bit, so this is usually safe — check with
+  `adb shell getprop ro.product.cpu.abi`. It is left in so the app cannot fail
+  to install on an older device.
+* **Enable R8** (`isMinifyEnabled = true`), worth perhaps 3 MB of the 8.6 MB of
+  dex. It has been left off deliberately: it needs working keep rules for ML Kit
+  (which parses its model manifest with Gson and reflection), Room and Hilt, and
+  none of that can be verified without a device. A release that crashes on
+  recognition is a worse trade than 3 MB.
+
+Rounding the stroke path coordinates to whole units was tried as well. It is
+worth about 0.5 MB and is in, but the decimal places were a small fraction of the
+data; the diagrams are mostly irreducible geometry.
+
+**The Japanese stroke SVGs are left byte-for-byte as KanjiVG publishes them.**
+Editing them would make them an adaptation rather than a collection, which
+changes what the CC BY-SA licence requires of the project.
 
 ## Publishing a release
 

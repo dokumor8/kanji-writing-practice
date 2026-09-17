@@ -24,10 +24,8 @@ class ChineseCardDataTest {
     }
 
     @Test
-    fun aWiderCandidateWindowIsAccepted() {
-        // A false reject blocks the card outright; a false accept costs one tap on
-        // "Again". For this recogniser that trade is worth the wider window.
-        assertEquals(3, com.example.kanjipractice.domain.AppScript.acceptedRanks)
+    fun onlyTheTopCandidateIsAccepted() {
+        assertEquals(1, com.example.kanjipractice.domain.AppScript.acceptedRanks)
     }
 
     @Test
