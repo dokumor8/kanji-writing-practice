@@ -1,6 +1,10 @@
 package com.example.kanjipractice.ui
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,7 +25,15 @@ private object Routes {
 
 @Composable
 fun KanjiPracticeApp(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Routes.DECK) {
+    // Screens that bring their own Scaffold already sit on a themed background,
+    // but the deck screen does not: with no Surface above it Compose's default
+    // content colour is plain black, which is all but invisible on the dark theme.
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+    ) {
+        NavHost(navController = navController, startDestination = Routes.DECK) {
         composable(Routes.DECK) {
             DeckListScreen(
                 onStartReview = { navController.navigate(Routes.REVIEW) },
@@ -43,8 +55,9 @@ fun KanjiPracticeApp(navController: NavHostController = rememberNavController())
                 onLicences = { navController.navigate(Routes.LICENCES) },
             )
         }
-        composable(Routes.LICENCES) {
-            LicencesScreen(onBack = { navController.popBackStack() })
+            composable(Routes.LICENCES) {
+                LicencesScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

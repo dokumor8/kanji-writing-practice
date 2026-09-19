@@ -273,6 +273,7 @@ class ReviewViewModel @Inject constructor(
             hintCount = hintCount,
             retryCount = retryCount,
             remaining = remaining,
+            gaveUp = false,
             canUndo = undoRecord != null,
         )
     }
@@ -304,7 +305,18 @@ class ReviewViewModel @Inject constructor(
     fun giveUp() {
         val state = _uiState.value as? ReviewUiState.Prompt ?: return
         if (state.busy) return
-        viewModelScope.launch { persistAndAdvance(state, Rating.AGAIN) }
+        _uiState.value = ReviewUiState.Success(
+            card = state.card,
+            diagram = state.diagram,
+            strokes = strokes,
+            recognized = null,
+            rating = Rating.AGAIN,
+            hintCount = hintCount,
+            retryCount = retryCount,
+            remaining = remaining,
+            gaveUp = true,
+            canUndo = undoRecord != null,
+        )
     }
 
     /** Stores the rating on the success screen; Next is what commits it. */

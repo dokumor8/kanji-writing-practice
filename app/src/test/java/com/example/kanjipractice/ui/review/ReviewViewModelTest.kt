@@ -541,24 +541,11 @@ class ReviewViewModelTest {
     // ---------------------------------------------------------------- giving up
 
     @Test
-    fun givingUpCommitsTheCardAsAgainAndAdvances() {
+    fun givingUpGoesToTheRatingScreenRatherThanScoringItself() {
         // The only route onwards used to run through getting the drawing
         // accepted, so a character the recogniser disliked blocked the session.
-        val vm = viewModel(listOf(dueCard(1, "\u65E5"), dueCard(2, "\u6708")))
-        recognition.candidates = listOf("\u7389")
-
-        vm.onStrokeFinished(stroke())
-        vm.submit()
-        vm.showHint()
-        vm.giveUp()
-
-        assertEquals(1, logs.entries.size)
-        assertEquals(Rating.AGAIN.value, logs.entries.single().rating)
-        assertEquals("\u6708", assertIs<ReviewUiState.Prompt>(vm.uiState.value).card.character)
-    }
-
-    @Test
-    fun givingUpIsUndoableBackToTheDrawing() {
+        // Committing Again immediately would be its own trap: being stuck should
+        // not force a lapse on a card the user actually knows.
         val vm = viewModel(listOf(dueCard(1, "\u65E5")))
         recognition.candidates = listOf("\u7389")
 
@@ -566,13 +553,40 @@ class ReviewViewModelTest {
         vm.submit()
         vm.showHint()
         vm.giveUp()
-        vm.undoLastReview()
 
-        val restored = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
-        assertEquals("\u65E5", restored.card.character)
-        assertEquals(1, restored.strokes.size, "the drawing comes back")
-        assertFalse(restored.hintVisible, "and the hint does not reopen itself")
-        assertTrue(logs.entries.isEmpty())
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertTrue(state.gaveUp)
+        assertEquals(Rating.AGAIN, state.rating)
+        assertEquals(1, state.strokes.size, "the drawing is kept for comparison")
+        assertTrue(logs.entries.isEmpty(), "nothing is committed until Next")
+    }
+
+    @Test
+    fun givingUpLetsTheUserUpgradeTheRating() {
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u7389")
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.showHint()
+        vm.giveUp()
+        vm.rate(Rating.GOOD)
+        vm.next()
+
+        assertEquals(Rating.GOOD.value, logs.entries.single().rating)
+    }
+
+    @Test
+    fun givingUpAndKeepingAgainCommitsTheLapse() {
+        val vm = viewModel(listOf(dueCard(1, "\u65E5")))
+        recognition.candidates = listOf("\u7389")
+
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.giveUp()
+        vm.next()
+
+        assertEquals(Rating.AGAIN.value, logs.entries.single().rating)
     }
 
     // -------------------------------------------------------- day-wide queueing

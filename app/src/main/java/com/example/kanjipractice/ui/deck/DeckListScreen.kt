@@ -23,12 +23,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.kanjipractice.R
 import com.example.kanjipractice.domain.recognition.ModelState
 
 /**
@@ -53,7 +55,9 @@ fun DeckListScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = "Kanji Practice",
+            // The app's own name, so the Chinese build does not announce itself
+            // as a kanji trainer.
+            text = stringResource(R.string.app_name),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
         )

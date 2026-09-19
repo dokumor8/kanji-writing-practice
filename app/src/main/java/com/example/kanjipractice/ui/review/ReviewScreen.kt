@@ -285,7 +285,16 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
-        if (state.recognized == null) {
+        if (state.gaveUp) {
+            Text(
+                text = "You gave up on this card. Again is selected - change it if " +
+                    "you did know it.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        } else if (state.recognized == null) {
             Text(
                 text = "Not checked - the recogniser was unavailable.",
                 style = MaterialTheme.typography.labelMedium,

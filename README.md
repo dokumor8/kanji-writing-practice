@@ -65,6 +65,10 @@ only the correct character is not enough to judge your own attempt.
         "I don't know"  ->  stroke-hint POPUP  ->  close  ->  draw
                             (repeatable; a hint suggests Again on SUCCESS)
 
+        "Give up" (in the hint popup)  ->  the rating screen, Again selected.
+                                     The way out when the recogniser will not
+                                     accept a drawing the user cannot improve.
+
         "Undo review" (top bar)  ->  the last committed review is taken back,
                                      including the queue copy a lapse appended
 ```

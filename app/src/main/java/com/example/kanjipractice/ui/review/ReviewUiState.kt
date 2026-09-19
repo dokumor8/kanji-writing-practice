@@ -66,6 +66,8 @@ sealed interface ReviewUiState {
         val hintCount: Int,
         val retryCount: Int,
         val remaining: Int,
+        /** True when the user abandoned the card instead of drawing it. */
+        val gaveUp: Boolean = false,
         override val canUndo: Boolean,
     ) : ReviewUiState
 }
