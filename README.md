@@ -99,6 +99,17 @@ characters *within* each grade. Chunks of a frequency list felt arbitrary --
 frequency puts 議 before 義 -- whereas grade order is a progression a learner can
 recognise.
 
+Changing the sets is a re-seed, and a re-seed does three jobs against one rule:
+**progress is never rewritten, everything else is.** Cards that are not there yet
+are inserted with a plain INSERT that skips existing rows, so a re-seed can never
+overwrite FSRS state. Set membership, order, and the card's own text are written
+separately, so they *are* refreshed on rows that already exist. Keeping the two
+halves apart is the whole point: skipping is right for progress and silently wrong
+for text, and 2.3.1 exists because 2.3.0 added two example-word columns that
+stayed null on every card an existing install already had while a fresh install
+looked perfect. `CardContentRefreshTest` fails if a column of the card is left
+out of all three jobs.
+
 ## How a drawing is judged
 
 Two separate questions, and the app asks both.

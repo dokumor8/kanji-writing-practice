@@ -81,6 +81,34 @@ interface CardDao {
     @Query("UPDATE cards SET deckId = :deckId, deckSortKey = :sortKey WHERE id = :id")
     suspend fun assignDeck(id: Long, deckId: String, sortKey: Int)
 
+    /**
+     * The card's own text, which is data like set membership and is safe to
+     * rewrite. Scheduling columns are deliberately absent: those are progress.
+     *
+     * This exists because [insertMissing] skips rows that are already present.
+     * That is right for progress and wrong for text -- a column added in a later
+     * version would stay null on every card an existing install already had,
+     * which is how 2.3.0 shipped blank example readings to anybody upgrading
+     * while a fresh install looked perfect.
+     */
+    @Query(
+        "UPDATE cards SET character = :character, meaning = :meaning, " +
+            "onyomi = :reading1, kunyomi = :reading2, " +
+            "exampleWord = :exampleWord, exampleReading = :exampleReading, " +
+            "exampleMeaning = :exampleMeaning, jlpt = :level WHERE id = :id"
+    )
+    suspend fun updateContent(
+        id: Long,
+        character: String,
+        meaning: String,
+        reading1: String?,
+        reading2: String?,
+        exampleWord: String?,
+        exampleReading: String?,
+        exampleMeaning: String?,
+        level: Int,
+    )
+
     @Query("SELECT COUNT(*) FROM cards WHERE deckId IS NULL")
     suspend fun countUnassigned(): Int
 

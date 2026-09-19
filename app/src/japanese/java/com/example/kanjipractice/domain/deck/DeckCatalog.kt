@@ -1,13 +1,17 @@
 package com.example.kanjipractice.domain.deck
 
 /**
- * The Japanese card sets: hiragana, katakana, and the 2136 Joyo kanji split into
- * six sets of 300 with a seventh of 336.
+ * The Japanese card sets: hiragana, katakana, and the 2136 Joyo kanji in school
+ * order -- grades 1 to 6, then the secondary grade split into frequency bands.
  */
 object DeckCatalog {
 
-    /** Bumped whenever the bundled card data changes which set a card is in. */
-    const val DATA_VERSION = 2
+    /**
+     * Bumped whenever the bundled card data changes: which set a card is in, the
+     * order within it, or the card's own text. A re-seed is also the only thing
+     * that can fill in a column an earlier version left null.
+     */
+    const val DATA_VERSION = 3
 
     val HIRAGANA = DeckInfo("hiragana", "Hiragana", "Kana")
     val KATAKANA = DeckInfo("katakana", "Katakana", "Kana")

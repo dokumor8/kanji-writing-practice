@@ -23,7 +23,8 @@ import javax.inject.Singleton
 /**
  * Loads the bundled card sets into the database.
  *
- * Two separate jobs, and keeping them separate is what makes upgrading safe:
+ * Three separate jobs. Splitting them is what makes upgrading safe, and the split
+ * is along a single line: **progress** is never rewritten, everything else is.
  *
  *  - **inserting** cards that are not there yet. This uses a plain INSERT that
  *    skips existing rows, so a re-seed can never overwrite the FSRS state of a
@@ -31,6 +32,12 @@ import javax.inject.Singleton
  *  - **assigning set membership**, which is data rather than progress and is safe
  *    to rewrite. Assigning it separately is also what migrates cards created by a
  *    build from before sets existed.
+ *  - **refreshing the card's text**, for the same reason. Without it, inserting
+ *    and skipping means a column added in a later version stays null on every
+ *    card an existing install already had; the new field shows up only for people
+ *    installing from scratch, which is the one case nobody tests.
+ *
+ * [CardContentRefreshTest] fails if a column of the card is left out of all three.
  */
 @Singleton
 class DeckSeeder @Inject constructor(
@@ -57,6 +64,17 @@ class DeckSeeder @Inject constructor(
             database.withTransaction {
                 for (card in cards) {
                     cardDao.assignDeck(card.id, card.deckId, card.sortKey)
+                    cardDao.updateContent(
+                        id = card.id,
+                        character = card.card.character,
+                        meaning = card.card.meaning,
+                        reading1 = card.card.reading1,
+                        reading2 = card.card.reading2,
+                        exampleWord = card.card.exampleWord,
+                        exampleReading = card.card.exampleReading,
+                        exampleMeaning = card.card.exampleMeaning,
+                        level = card.card.level,
+                    )
                 }
             }
         }
