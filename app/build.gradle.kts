@@ -41,8 +41,8 @@ android {
         // it keeps the API surface small.
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "2.2.1"
+        versionCode = 12
+        versionName = "2.3.0"
 
         ndk {
             // ML Kit's recognition engine is a native library, and it ships one

@@ -136,11 +136,25 @@ class FakeStudySettingsRepository(
     val limit = MutableStateFlow(initialLimit)
     val deckIds = MutableStateFlow(initialDecks)
     val deckDataVersion = MutableStateFlow(initialDeckDataVersion)
+    val acceptedCandidates = MutableStateFlow(StudySettings.DEFAULT_ACCEPTED_CANDIDATES)
+    val similarityPercent = MutableStateFlow(StudySettings.DEFAULT_SIMILARITY_PERCENT)
 
     override fun observeDailyNewLimit(): Flow<Int> = limit
 
     override suspend fun setDailyNewLimit(limit: Int) {
         this.limit.value = limit
+    }
+
+    override fun observeAcceptedCandidates(): Flow<Int> = acceptedCandidates
+
+    override suspend fun setAcceptedCandidates(count: Int) {
+        acceptedCandidates.value = count
+    }
+
+    override fun observeSimilarityThresholdPercent(): Flow<Int> = similarityPercent
+
+    override suspend fun setSimilarityThresholdPercent(percent: Int) {
+        similarityPercent.value = percent
     }
 
     override fun observeSelectedDeckIds(): Flow<Set<String>> = deckIds

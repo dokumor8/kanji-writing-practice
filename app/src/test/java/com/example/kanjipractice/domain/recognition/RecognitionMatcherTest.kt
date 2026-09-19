@@ -22,7 +22,7 @@ class RecognitionMatcherTest {
 
     @Test
     fun aWiderWindowAcceptsTheSameMatch() {
-        // Which setting a flavour uses is its own choice; see AppScript.acceptedRanks.
+        // How wide the window is comes from settings; this is the rule itself.
         assertTrue(RecognitionMatcher.isCorrect("\u4E3B", listOf("\u7389", "\u4E3B"), 3))
     }
 

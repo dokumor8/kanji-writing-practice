@@ -35,6 +35,8 @@ data class SettingsUiState(
     val groups: List<DeckGroup> = emptyList(),
     val dailyNewLimit: Int = StudySettings.DEFAULT_DAILY_NEW_LIMIT,
     val introducedToday: Int = 0,
+    val acceptedCandidates: Int = StudySettings.DEFAULT_ACCEPTED_CANDIDATES,
+    val similarityThresholdPercent: Int = StudySettings.DEFAULT_SIMILARITY_PERCENT,
     val modelState: ModelState = ModelState.Unknown,
 ) {
     private val allRows: List<DeckRow> get() = groups.flatMap { it.decks }
@@ -59,6 +61,8 @@ class SettingsViewModel @Inject constructor(
         val selected: Set<String>,
         val limit: Int,
         val model: ModelState,
+        val candidates: Int,
+        val similarity: Int,
     )
 
     private val base = combine(
@@ -66,7 +70,12 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.observeSelectedDeckIds(),
         settingsRepository.observeDailyNewLimit(),
         recognitionService.modelState,
-    ) { counts, selected, limit, model -> Base(counts, selected, limit, model) }
+        settingsRepository.observeAcceptedCandidates(),
+    ) { counts, selected, limit, model, candidates ->
+        Base(counts, selected, limit, model, candidates, StudySettings.DEFAULT_SIMILARITY_PERCENT)
+    }.combine(settingsRepository.observeSimilarityThresholdPercent()) { state, similarity ->
+        state.copy(similarity = similarity)
+    }
 
     val uiState: StateFlow<SettingsUiState> = combine(
         base,
@@ -87,6 +96,8 @@ class SettingsViewModel @Inject constructor(
             },
             dailyNewLimit = state.limit,
             introducedToday = introduced,
+            acceptedCandidates = state.candidates,
+            similarityThresholdPercent = state.similarity,
             modelState = state.model,
         )
     }.stateIn(
@@ -102,8 +113,9 @@ class SettingsViewModel @Inject constructor(
     fun toggleDeck(deckId: String) {
         viewModelScope.launch {
             val current = settingsRepository.observeSelectedDeckIds().first()
-            val next = if (deckId in current) current - deckId else current + deckId
-            settingsRepository.setSelectedDeckIds(next)
+            settingsRepository.setSelectedDeckIds(
+                if (deckId in current) current - deckId else current + deckId
+            )
         }
     }
 
@@ -124,8 +136,27 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun nudgeDailyNewLimit(steps: Int) {
-        val next = uiState.value.dailyNewLimit + steps * StudySettings.DAILY_NEW_LIMIT_STEP
-        setDailyNewLimit(next)
+        setDailyNewLimit(uiState.value.dailyNewLimit + steps * StudySettings.DAILY_NEW_LIMIT_STEP)
+    }
+
+    fun setAcceptedCandidates(count: Int) {
+        val clamped = StudySettings.coerceAcceptedCandidates(count)
+        viewModelScope.launch { settingsRepository.setAcceptedCandidates(clamped) }
+    }
+
+    fun nudgeAcceptedCandidates(steps: Int) {
+        setAcceptedCandidates(uiState.value.acceptedCandidates + steps * 1)
+    }
+
+    fun setSimilarityThresholdPercent(percent: Int) {
+        val clamped = StudySettings.coerceSimilarityPercent(percent)
+        viewModelScope.launch { settingsRepository.setSimilarityThresholdPercent(clamped) }
+    }
+
+    fun nudgeSimilarityThreshold(steps: Int) {
+        setSimilarityThresholdPercent(
+            uiState.value.similarityThresholdPercent + steps * StudySettings.SIMILARITY_STEP
+        )
     }
 
     /** Starts (or retries) the one-off recognition model download. */

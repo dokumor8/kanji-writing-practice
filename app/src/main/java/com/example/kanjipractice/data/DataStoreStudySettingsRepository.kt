@@ -41,6 +41,30 @@ class DataStoreStudySettingsRepository @Inject constructor(
         }
     }
 
+    override fun observeAcceptedCandidates(): Flow<Int> =
+        context.studySettingsStore.data.map { preferences ->
+            preferences[ACCEPTED_CANDIDATES] ?: StudySettings.DEFAULT_ACCEPTED_CANDIDATES
+        }
+
+    override suspend fun setAcceptedCandidates(count: Int) {
+        val clamped = StudySettings.coerceAcceptedCandidates(count)
+        context.studySettingsStore.edit { preferences ->
+            preferences[ACCEPTED_CANDIDATES] = clamped
+        }
+    }
+
+    override fun observeSimilarityThresholdPercent(): Flow<Int> =
+        context.studySettingsStore.data.map { preferences ->
+            preferences[SIMILARITY_THRESHOLD] ?: StudySettings.DEFAULT_SIMILARITY_PERCENT
+        }
+
+    override suspend fun setSimilarityThresholdPercent(percent: Int) {
+        val clamped = StudySettings.coerceSimilarityPercent(percent)
+        context.studySettingsStore.edit { preferences ->
+            preferences[SIMILARITY_THRESHOLD] = clamped
+        }
+    }
+
     override fun observeSelectedDeckIds(): Flow<Set<String>> =
         context.studySettingsStore.data.map { preferences ->
             // An empty set means "nothing chosen", which is a legitimate state to
@@ -69,6 +93,8 @@ class DataStoreStudySettingsRepository @Inject constructor(
 
     private companion object {
         val DAILY_NEW_LIMIT = intPreferencesKey("daily_new_limit")
+        val ACCEPTED_CANDIDATES = intPreferencesKey("accepted_candidates")
+        val SIMILARITY_THRESHOLD = intPreferencesKey("similarity_threshold_percent")
         val SELECTED_DECKS = stringSetPreferencesKey("selected_deck_ids")
         val DECK_DATA_VERSION = intPreferencesKey("deck_data_version")
     }

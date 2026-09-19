@@ -24,11 +24,6 @@ class ChineseCardDataTest {
     }
 
     @Test
-    fun onlyTheTopCandidateIsAccepted() {
-        assertEquals(1, com.example.kanjipractice.domain.AppScript.acceptedRanks)
-    }
-
-    @Test
     fun everyHskLevelIsPresent() {
         assertEquals(7, DeckCatalog.ALL.size)
         assertEquals(

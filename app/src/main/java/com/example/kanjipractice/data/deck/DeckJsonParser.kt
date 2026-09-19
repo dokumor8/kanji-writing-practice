@@ -27,6 +27,8 @@ object DeckJsonParser {
                 reading1 = obj.optStringOrNull("reading1"),
                 reading2 = obj.optStringOrNull("reading2"),
                 exampleWord = obj.optStringOrNull("exampleWord"),
+                exampleReading = obj.optStringOrNull("exampleReading"),
+                exampleMeaning = obj.optStringOrNull("exampleMeaning"),
                 level = obj.optInt("level", 0),
                 deckId = obj.getString("deck"),
                 sortKey = obj.getInt("sortKey"),

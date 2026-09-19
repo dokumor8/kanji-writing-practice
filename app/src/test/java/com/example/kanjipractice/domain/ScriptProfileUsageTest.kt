@@ -59,7 +59,6 @@ class ScriptProfileUsageTest {
             "cardAssets",
             "strokeAssetDir",
             "levelPrefix",
-            "acceptedRanks",
             "licences",
         )
     }

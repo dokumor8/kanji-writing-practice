@@ -46,6 +46,8 @@ sealed interface ReviewUiState {
          * make the deck unusable.
          */
         val recognitionFailed: Boolean,
+        /** True when the reference diagram is shown as a guide to draw over. */
+        val guideVisible: Boolean = false,
         val busy: Boolean,
         val remaining: Int,
         override val canUndo: Boolean,
@@ -68,6 +70,11 @@ sealed interface ReviewUiState {
         val remaining: Int,
         /** True when the user abandoned the card instead of drawing it. */
         val gaveUp: Boolean = false,
+        /**
+         * How closely the drawing reproduced the reference, 0-100, or null when
+         * there was no diagram to compare against.
+         */
+        val similarityPercent: Int? = null,
         override val canUndo: Boolean,
     ) : ReviewUiState
 }

@@ -87,10 +87,28 @@ fun SettingsScreen(
             }
 
             SectionHeader("New cards per day")
-            LimitRow(
-                limit = state.dailyNewLimit,
-                introducedToday = state.introducedToday,
+            StepperRow(
+                title = "New cards per day",
+                detail = state.introducedToday.toString() + " introduced today",
+                value = state.dailyNewLimit.toString(),
+                canDecrease = state.dailyNewLimit > 0,
                 onNudge = viewModel::nudgeDailyNewLimit,
+            )
+
+            SectionHeader("How a drawing is judged")
+            StepperRow(
+                title = "Candidates accepted",
+                detail = "Of the recogniser's suggestions",
+                value = state.acceptedCandidates.toString(),
+                canDecrease = state.acceptedCandidates > StudySettings.MIN_ACCEPTED_CANDIDATES,
+                onNudge = viewModel::nudgeAcceptedCandidates,
+            )
+            StepperRow(
+                title = "Shape match required",
+                detail = "How closely the drawing must match",
+                value = state.similarityThresholdPercent.toString() + "%",
+                canDecrease = state.similarityThresholdPercent > 0,
+                onNudge = viewModel::nudgeSimilarityThreshold,
             )
 
             SectionHeader("Handwriting model")
@@ -150,30 +168,37 @@ private fun DeckToggleRow(row: DeckRow, onToggle: (String) -> Unit) {
 }
 
 @Composable
-private fun LimitRow(limit: Int, introducedToday: Int, onNudge: (Int) -> Unit) {
+private fun StepperRow(
+    title: String,
+    detail: String,
+    value: String,
+    canDecrease: Boolean,
+    onNudge: (Int) -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = introducedToday.toString() + " introduced today",
-                style = MaterialTheme.typography.bodyMedium,
+                text = detail,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         OutlinedButton(
             onClick = { onNudge(-1) },
-            enabled = limit > 0,
+            enabled = canDecrease,
             modifier = Modifier.size(width = 56.dp, height = 40.dp),
         ) { Text("-") }
         Text(
-            text = limit.toString(),
+            text = value,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         OutlinedButton(
             onClick = { onNudge(+1) },
-            enabled = limit < StudySettings.MAX_DAILY_NEW_LIMIT,
             modifier = Modifier.size(width = 56.dp, height = 40.dp),
         ) { Text("+") }
     }

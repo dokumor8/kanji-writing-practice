@@ -65,9 +65,18 @@ only the correct character is not enough to judge your own attempt.
         "I don't know"  ->  stroke-hint POPUP  ->  close  ->  draw
                             (repeatable; a hint suggests Again on SUCCESS)
 
+        CHECK is two questions: is the target among the recogniser's top few
+        candidates, AND does the drawing match the reference diagram? A correct
+        drawing can lose the first; a wrong one can win it.
+
         "Give up" (in the hint popup)  ->  the rating screen, Again selected.
                                      The way out when the recogniser will not
                                      accept a drawing the user cannot improve.
+
+        "Draw it again" (rating screen)  ->  back to the canvas with the diagram
+                                     showing, for deliberate practice. The next
+                                     rating is suggested Again, since the answer
+                                     was on screen.
 
         "Undo review" (top bar)  ->  the last committed review is taken back,
                                      including the queue copy a lapse appended
@@ -81,12 +90,49 @@ Nine sets, chosen in settings, all off by default except the kanji:
 | --- | --- |
 | Hiragana | 71 (46 basic + 20 voiced + 5 semi-voiced) |
 | Katakana | 71 |
-| Kanji 1–6 | 300 each, commonest first |
-| Kanji 7 | 336, the rest of the 2136 Jōyō kanji |
+| Grade 1–6 | 80, 160, 200, 200, 185, 181 — the primary-school set |
+| Secondary 1–4 | 283, 283, 283, 281 — the secondary grade, in frequency bands |
 
-Sessions draw only from the selected sets. The kanji are ordered by KANJIDIC's
-newspaper frequency rank, which is why set 1 opens with 日, 一, 国, 会, 人 rather
-than with whatever a textbook happens to start on.
+Sessions draw only from the selected sets. The Japanese sets are **school
+grades**, the order Japanese children learn them, with frequency ordering the
+characters *within* each grade. Chunks of a frequency list felt arbitrary --
+frequency puts 議 before 義 -- whereas grade order is a progression a learner can
+recognise.
+
+## How a drawing is judged
+
+Two separate questions, and the app asks both.
+
+**Did the recogniser name the character?** ML Kit answers this, and how many of
+its candidates count is a setting (five by default). A correct drawing can lose
+to a similar character, so one candidate is too few.
+
+**Did the drawing actually reproduce it?** The recogniser cannot answer this: it
+picks the nearest character, which it will happily do from a drawing with strokes
+missing. So the drawing is also compared against the bundled stroke diagram --
+stroke *i* against stroke *i*, both normalised into a shared box, and the share
+of points that land within 12% of the character's size of their counterpart.
+
+The default 70% threshold is a measurement, not a taste:
+`StrokeSimilarityCalibrationTest` scores perturbed copies of real reference
+diagrams, and the results separate cleanly.
+
+| Drawing | Score |
+| --- | --- |
+| exact copy, or a wobbly one | 1.00 |
+| 目 drawn as 日, and one stroke missing from an 18-stroke character | 0.24, 0.57 |
+| a displaced stroke | 0.14 |
+| half a character | 0.30 |
+| a different character | 0.18 |
+| 主 drawn in 玉's stroke order | 0.17 |
+
+Correct drawings score 1.00 and every measured way of getting it wrong scores
+0.57 or below, so 70% sits in the gap with room on both sides. Both this and the
+candidate count are adjustable in settings; at 0% the shape check is off.
+
+The comparison is shape-only and order-sensitive. It knows nothing about where on
+the canvas you wrote, and KanjiVG carries no stroke width, so it cannot tell a
+confident stroke from a tentative one.
 
 ## Study limits
 

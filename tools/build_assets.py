@@ -7,7 +7,7 @@ Inputs (fetched into .buildcache/recon):
   kanjivg-master/kanji/    KanjiVG stroke-order SVGs, kanji *and* kana
 
 Outputs, into the app's assets directory:
-  kanji.json   2136 Joyo kanji, split into 7 sets
+  kanji.json   2136 Joyo kanji, one set per school grade
   kana.json    71 hiragana + 71 katakana
   kanjivg/     one SVG per card, named by code point
 """
@@ -22,10 +22,10 @@ KANA = re.compile(r'^[\u3040-\u309f\u30a0-\u30ff]+$')
 CJK = re.compile(r'^[\u4e00-\u9fff]+$')
 HIRA_START, HIRA_END, KATA_OFFSET = 0x3041, 0x3096, 0x60
 
-KANJI_SET_SIZE = 300
-# Six full sets of 300, then everything that is left in the seventh: 2136 Joyo
-# kanji become 6 x 300 + 336.
-KANJI_SET_COUNT = 7
+# Grade 8 holds over a thousand characters, so it is cut into this many
+# frequency bands. Grades 1-6 each become a set of their own.
+SECONDARY_SET_COUNT = 4
+BLANK = '\uFF3F'
 
 
 def to_katakana(s):
@@ -51,14 +51,20 @@ def load_vocab():
             continue
         with open(full, encoding='utf-8') as fh:
             for row in csv.DictReader(fh):
-                words.append((level, row['expression']))
+                words.append((level, row['expression'], row['reading'], row['meaning']))
     return words
+
+
+def clean_example_meaning(raw):
+    """Vocabulary glosses read 'to meet, to see'; one or two is plenty here."""
+    parts = [part.strip() for part in raw.split(',') if part.strip()]
+    return ', '.join(parts[:2])
 
 
 def pick_example(kanji, words):
     """A short common compound containing *kanji* exactly once."""
     best, best_key = None, None
-    for level, expr in words:
+    for level, expr, reading, meaning in words:
         if kanji not in expr or expr.count(kanji) != 1:
             continue
         if not (2 <= len(expr) <= 3):
@@ -74,36 +80,65 @@ def pick_example(kanji, words):
                2 if all_kanji else 3
         key = (tier, len(expr), -level)
         if best_key is None or key < best_key:
-            best, best_key = expr, key
+            best, best_key = (expr, reading, meaning), key
     return best
 
 
 def kanji_cards(data, words):
+    """Cards grouped the way Japanese schools teach them.
+
+    Sets are school grades rather than chunks of a frequency list. Frequency
+    ordering put 議 before 義, which reads as arbitrary; grade order is a
+    progression a learner can recognise. Frequency still orders the characters
+    *within* a grade, since the newspaper rank is a good proxy for how soon a
+    character turns up in real text.
+    """
     joyo = {k: v for k, v in data.items() if v.get('grade') in range(1, 9)}
-    # Most common first: KANJIDIC's newspaper frequency rank. The ~100 Joyo kanji
-    # without a rank go last, ordered by school grade.
     ordered = sorted(
         joyo.items(),
-        key=lambda kv: (kv[1].get('freq') or 10 ** 6, kv[1].get('grade') or 9, kv[0]),
+        key=lambda kv: (kv[1].get('grade') or 9, kv[1].get('freq') or 10 ** 6, kv[0]),
     )
 
+    by_grade = {}
+    for kanji, info in ordered:
+        by_grade.setdefault(info.get('grade') or 9, []).append((kanji, info))
+
+    # Grades 1-6 are the primary-school set, small enough to stand alone. The
+    # secondary grade holds over a thousand characters, so it is cut into bands.
+    chunks = []
+    for grade in sorted(by_grade):
+        entries = by_grade[grade]
+        if grade <= 6:
+            chunks.append(('grade-%d' % grade, entries))
+        else:
+            size = -(-len(entries) // SECONDARY_SET_COUNT)
+            for part in range(SECONDARY_SET_COUNT):
+                piece = entries[part * size:(part + 1) * size]
+                if piece:
+                    chunks.append(('secondary-%d' % (part + 1), piece))
+
     cards = []
-    for index, (kanji, info) in enumerate(ordered):
-        meaning = clean_meaning(info.get('meanings') or [])
-        if not meaning:
-            continue
-        kun = [r for r in (info.get('readings_kun') or []) if r]
-        example = pick_example(kanji, words)
-        cards.append({
-            'character': kanji,
-            'meaning': meaning,
-            'reading1': ', '.join(to_katakana(r) for r in (info.get('readings_on') or [])) or None,
-            'reading2': ', '.join(kun) or None,
-            'exampleWord': example.replace(kanji, '\uFF3F') if example else None,
-            'level': info.get('jlpt_new') or 0,
-            'deck': 'kanji-%d' % min(index // KANJI_SET_SIZE + 1, KANJI_SET_COUNT),
-            'sortKey': index,
-        })
+    index = 0
+    for deck, entries in chunks:
+        for kanji, info in entries:
+            meaning = clean_meaning(info.get('meanings') or [])
+            if not meaning:
+                continue
+            kun = [r for r in (info.get('readings_kun') or []) if r]
+            example = pick_example(kanji, words)
+            cards.append({
+                'character': kanji,
+                'meaning': meaning,
+                'reading1': ', '.join(to_katakana(r) for r in (info.get('readings_on') or [])) or None,
+                'reading2': ', '.join(kun) or None,
+                'exampleWord': example[0].replace(kanji, BLANK) if example else None,
+                'exampleReading': example[1] if example else None,
+                'exampleMeaning': clean_example_meaning(example[2]) if example else None,
+                'level': info.get('jlpt_new') or 0,
+                'deck': deck,
+                'sortKey': index,
+            })
+            index += 1
     return cards
 
 

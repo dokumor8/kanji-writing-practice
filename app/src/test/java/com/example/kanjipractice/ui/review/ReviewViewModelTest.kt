@@ -538,6 +538,73 @@ class ReviewViewModelTest {
         assertIs<ReviewUiState.Success>(vm.uiState.value)
     }
 
+    // -------------------------------------------------------- the shape check
+
+    @Test
+    fun aDrawingThatDoesNotMatchTheReferenceIsRejectedEvenIfRankedFirst() {
+        // The recogniser answers "which character is this?"; this is the other
+        // question, and the one that catches a character recognised correctly
+        // from a drawing that is visibly not it.
+        val vm = viewModel(listOf(newCard(1, "日")))
+        recognition.candidates = listOf("日")
+        // The fake reference is a single diagonal stroke; this is a flat line.
+        vm.onStrokeFinished(
+            Stroke(listOf(StrokePoint(0f, 0f), StrokePoint(50f, 0f), StrokePoint(100f, 0f)))
+        )
+        vm.submit()
+
+        val state = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
+        assertEquals(1, state.retryCount)
+        assertTrue(state.message?.contains("shape match") == true, "message was " + state.message)
+    }
+
+    @Test
+    fun aDrawingThatMatchesTheReferenceIsAccepted() {
+        val vm = viewModel(listOf(newCard(1, "日")))
+        recognition.candidates = listOf("日")
+        vm.onStrokeFinished(
+            Stroke(listOf(StrokePoint(0f, 0f), StrokePoint(50f, 50f), StrokePoint(100f, 100f)))
+        )
+        vm.submit()
+
+        val state = assertIs<ReviewUiState.Success>(vm.uiState.value)
+        assertTrue((state.similarityPercent ?: 0) > 90, "shape was " + state.similarityPercent)
+    }
+
+    // ------------------------------------------------------------ drawing again
+
+    @Test
+    fun drawingAgainReturnsToTheCanvasWithTheGuideShowing() {
+        // The only way to practise a character used to be to fail it, which is
+        // backwards: the ones worth practising are the ones you nearly know.
+        val vm = viewModel(listOf(dueCard(1, "日")))
+        recognition.candidates = listOf("日")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        assertIs<ReviewUiState.Success>(vm.uiState.value)
+
+        vm.drawAgain()
+
+        val state = assertIs<ReviewUiState.Prompt>(vm.uiState.value)
+        assertTrue(state.guideVisible, "the reference should be shown for practice")
+        assertTrue(state.strokes.isEmpty(), "and the canvas should be clear")
+        assertTrue(logs.entries.isEmpty(), "nothing is committed by practising")
+    }
+
+    @Test
+    fun practisingOverTheGuideSuggestsAgain() {
+        // The guide is the answer, so what follows is copying rather than recall.
+        val vm = viewModel(listOf(dueCard(1, "日")))
+        recognition.candidates = listOf("日")
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+        vm.drawAgain()
+        vm.onStrokeFinished(stroke())
+        vm.submit()
+
+        assertEquals(Rating.AGAIN, assertIs<ReviewUiState.Success>(vm.uiState.value).rating)
+    }
+
     // ---------------------------------------------------------------- giving up
 
     @Test

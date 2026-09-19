@@ -7,11 +7,19 @@ package com.example.kanjipractice.domain.deck
 object DeckCatalog {
 
     /** Bumped whenever the bundled card data changes which set a card is in. */
-    const val DATA_VERSION = 1
+    const val DATA_VERSION = 2
 
     val HIRAGANA = DeckInfo("hiragana", "Hiragana", "Kana")
     val KATAKANA = DeckInfo("katakana", "Katakana", "Kana")
-    val KANJI: List<DeckInfo> = (1..7).map { DeckInfo("kanji-$it", "Kanji $it", "Kanji") }
+    /** Primary school: one set per grade, the order Japanese children learn them. */
+    val PRIMARY: List<DeckInfo> =
+        (1..6).map { DeckInfo("grade-$it", "Grade $it", "Primary school") }
+
+    /** Secondary school, which is over a thousand characters, split by frequency. */
+    val SECONDARY: List<DeckInfo> =
+        (1..4).map { DeckInfo("secondary-$it", "Secondary $it", "Secondary school") }
+
+    val KANJI: List<DeckInfo> = PRIMARY + SECONDARY
 
     val ALL: List<DeckInfo> = listOf(HIRAGANA, KATAKANA) + KANJI
 

@@ -12,6 +12,10 @@ data class DeckCard(
     val reading1: String?,
     val reading2: String?,
     val exampleWord: String?,
+    /** How the example word is read, so the prompt is not just a puzzle. */
+    val exampleReading: String?,
+    /** What the example word means, trimmed to a gloss or two. */
+    val exampleMeaning: String?,
     /** JLPT level, or HSK level, or 0 where the concept does not apply. */
     val level: Int,
     val deckId: String,

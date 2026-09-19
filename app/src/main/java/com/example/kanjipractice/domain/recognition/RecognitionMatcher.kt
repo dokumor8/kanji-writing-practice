@@ -1,23 +1,21 @@
 package com.example.kanjipractice.domain.recognition
 
-import com.example.kanjipractice.domain.AppScript
-
 /**
- * Decides whether a drawing counts as the target character.
+ * Whether the recogniser put the target among its accepted candidates.
  *
- * How many candidates are accepted is a property of the recogniser rather than of
- * this rule, so it comes from [AppScript.acceptedRanks]. Both apps use top-one:
- * accepting more is what let a character ranked below the model's first choice
- * pass, and a wrong character the model is confident about is exactly what this
- * check exists to catch.
+ * How many candidates count is a *setting*, not a constant, because the right
+ * answer depends on the recogniser and on how tolerant the user wants to be. It
+ * is only half the judgement, though: StrokeSimilarity decides whether the
+ * drawing actually reproduces the character, which is not a question a rank can
+ * answer.
  */
 object RecognitionMatcher {
 
     fun isCorrect(
         target: String,
         candidates: List<String>,
-        acceptedRanks: Int = AppScript.acceptedRanks,
-    ): Boolean = target in candidates.take(acceptedRanks)
+        acceptedCandidates: Int,
+    ): Boolean = target in candidates.take(acceptedCandidates)
 
     /** The best candidate, shown to the user so a rejection is explicable. */
     fun bestCandidate(candidates: List<String>): String? = candidates.firstOrNull()

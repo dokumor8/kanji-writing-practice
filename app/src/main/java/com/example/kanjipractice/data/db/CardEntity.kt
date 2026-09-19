@@ -33,6 +33,8 @@ data class CardEntity(
 
     /** A common compound with the target character already replaced by a blank. */
     val exampleWord: String?,
+    val exampleReading: String? = null,
+    val exampleMeaning: String? = null,
 
     /** JLPT level in the Japanese flavour, HSK level in the Chinese one. */
     @ColumnInfo(name = "jlpt") val level: Int,

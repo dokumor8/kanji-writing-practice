@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.kanjipractice.data.db.CardEntity
-import com.example.kanjipractice.domain.AppScript
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.recognition.RecognitionMatcher
 import com.example.kanjipractice.domain.recognition.RecognitionService
@@ -15,6 +14,7 @@ import com.example.kanjipractice.domain.session.StudyQueueBuilder
 import com.example.kanjipractice.domain.settings.StudySettings
 import com.example.kanjipractice.domain.settings.StudySettingsRepository
 import com.example.kanjipractice.domain.stroke.StrokeDiagramProvider
+import com.example.kanjipractice.domain.stroke.StrokeSimilarity
 import com.example.kanjipractice.domain.util.DayBoundary
 import com.example.fsrs.Rating
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -67,6 +67,13 @@ class ReviewViewModel @Inject constructor(
     private var messageJob: Job? = null
     private var undoRecord: UndoRecord? = null
 
+    /** How a drawing is judged, read when the session starts. */
+    /** Set once the user chooses to draw again over the guide. */
+    private var usedGuide = false
+
+    private var acceptedCandidates = StudySettings.DEFAULT_ACCEPTED_CANDIDATES
+    private var similarityThreshold = StudySettings.DEFAULT_SIMILARITY_PERCENT / 100.0
+
     /**
      * Everything needed to take a review back. Only the most recent review can be
      * undone (the same one-level undo Anki offers), which is enough to fix a
@@ -110,6 +117,8 @@ class ReviewViewModel @Inject constructor(
 
     private suspend fun buildQueue(): List<CardEntity> {
         val settings = currentStudySettings()
+        acceptedCandidates = settings.acceptedCandidates
+        similarityThreshold = settings.similarityThreshold
         val deckIds = settingsRepository.observeSelectedDeckIds().first()
         // Everything due today, not everything due this minute.
         val dueReviews = cardRepository
@@ -124,7 +133,13 @@ class ReviewViewModel @Inject constructor(
         val introduced = reviewLogRepository
             .observeIntroducedSince(DayBoundary.startOfStudyDay(clock, zone))
             .first()
-        return StudySettings(dailyNewLimit = limit, introducedToday = introduced)
+        return StudySettings(
+            dailyNewLimit = limit,
+            introducedToday = introduced,
+            acceptedCandidates = settingsRepository.observeAcceptedCandidates().first(),
+            similarityThresholdPercent =
+                settingsRepository.observeSimilarityThresholdPercent().first(),
+        )
     }
 
     private suspend fun showCurrentCard() {
@@ -136,6 +151,7 @@ class ReviewViewModel @Inject constructor(
         strokes = emptyList()
         retryCount = 0
         hintCount = 0
+        usedGuide = false
         _uiState.value = ReviewUiState.Prompt(
             card = card,
             diagram = strokeDataService.diagramFor(card.character),
@@ -216,12 +232,19 @@ class ReviewViewModel @Inject constructor(
                 return@launch
             }
 
-            if (RecognitionMatcher.isCorrect(
-                    target = state.card.character,
-                    candidates = candidates,
-                    acceptedRanks = AppScript.acceptedRanks,
-                )
-            ) {
+            // Two questions, not one. The recogniser answers "which character is
+            // this?", which a drawing can win while being visibly wrong; the shape
+            // comparison answers "did you draw *this* character?", which a correct
+            // drawing can only fail if it really is off.
+            val similarity = StrokeSimilarity.compare(strokes, state.diagram)
+            val ranked = RecognitionMatcher.isCorrect(
+                target = state.card.character,
+                candidates = candidates,
+                acceptedCandidates = acceptedCandidates,
+            )
+            val shapeOk = similarity == null || similarity.score >= similarityThreshold
+
+            if (ranked && shapeOk) {
                 _uiState.value = ReviewUiState.Success(
                     card = state.card,
                     diagram = state.diagram,
@@ -231,6 +254,7 @@ class ReviewViewModel @Inject constructor(
                     hintCount = hintCount,
                     retryCount = retryCount,
                     remaining = remaining,
+                    similarityPercent = similarity?.percent,
                     canUndo = undoRecord != null,
                 )
             } else {
@@ -240,10 +264,22 @@ class ReviewViewModel @Inject constructor(
                 // Naming what the recogniser saw turns "wrong" into something the
                 // user can act on, and is the only way to diagnose a character
                 // the model will not accept from a distance.
-                Log.i(TAG, "Rejected " + state.card.character + ", best candidate was " + read)
+                Log.i(
+                    TAG,
+                    "Rejected " + state.card.character + ": ranked=" + ranked +
+                        " shape=" + (similarity?.percent ?: -1) + " best=" + read,
+                )
+                // Saying which of the two failed, and naming the character the
+                // recogniser saw, turns "wrong" into something to act on.
+                val message = when {
+                    ranked && similarity != null ->
+                        "Not quite - shape match " + similarity.percent + "%"
+                    !read.isNullOrBlank() -> "Not quite - I read that as " + read
+                    else -> MESSAGE_NOT_QUITE
+                }
                 setPromptMessage(
                     current.copy(retryCount = retryCount, strokes = strokes),
-                    if (read.isNullOrBlank()) MESSAGE_NOT_QUITE else "Not quite - I read that as " + read,
+                    message,
                     clearAfterMillis = TRANSIENT_MESSAGE_MILLIS,
                 )
             }
@@ -289,9 +325,40 @@ class ReviewViewModel @Inject constructor(
      * Easy is never suggested: only the user can say a card was effortless.
      */
     private fun defaultRating(): Rating = when {
-        hintCount > 0 -> Rating.AGAIN
+        // Seeing the answer at all -- through the hint, or by choosing to draw it
+        // again over the guide -- means it was not recalled.
+        hintCount > 0 || usedGuide -> Rating.AGAIN
         retryCount > 0 -> Rating.HARD
         else -> Rating.GOOD
+    }
+
+    /**
+     * Back to the canvas with the reference diagram showing, for deliberate
+     * practice after a review that went through.
+     *
+     * Until now the only way to practise a character was to fail it, which is
+     * backwards: the ones worth practising are the ones you nearly know. What is
+     * drawn here is practice, not recall, so the next rating is suggested Again.
+     */
+    fun drawAgain() {
+        val state = _uiState.value as? ReviewUiState.Success ?: return
+        usedGuide = true
+        strokes = emptyList()
+        retryCount = 0
+        _uiState.value = ReviewUiState.Prompt(
+            card = state.card,
+            diagram = state.diagram,
+            strokes = emptyList(),
+            retryCount = 0,
+            hintCount = hintCount,
+            hintVisible = false,
+            message = null,
+            recognitionFailed = false,
+            guideVisible = true,
+            busy = false,
+            remaining = remaining,
+            canUndo = undoRecord != null,
+        )
     }
 
     /**

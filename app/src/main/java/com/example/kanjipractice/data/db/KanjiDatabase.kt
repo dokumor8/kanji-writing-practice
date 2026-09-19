@@ -7,12 +7,15 @@ import androidx.room.TypeConverters
 
 @Database(
     entities = [CardEntity::class, ReviewLogEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
     // Adding two nullable columns. Room derives the SQL from the schema diff and
     // checks it at build time, which is safer than hand-writing the ALTER TABLEs
     // for the one migration that must not lose somebody's review history.
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
+    ],
 )
 @TypeConverters(Converters::class)
 abstract class KanjiDatabase : RoomDatabase() {

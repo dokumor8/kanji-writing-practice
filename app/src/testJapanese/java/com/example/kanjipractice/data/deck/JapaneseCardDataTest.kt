@@ -25,21 +25,26 @@ class JapaneseCardDataTest {
     }
 
     @Test
-    fun onlyTheTopCandidateIsAccepted() {
-        // The Japanese model is accurate enough that a wrong character coming top
-        // is a real error; this is the setting that caught 玉 for 主.
-        assertEquals(1, com.example.kanjipractice.domain.AppScript.acceptedRanks)
-    }
-
-    @Test
     fun theJoyoDeckIsComplete() {
         assertEquals(2136, kanji.size)
     }
 
     @Test
-    fun kanjiAreSplitIntoSevenSetsWithALargerLastOne() {
+    fun kanjiAreSplitBySchoolGrade() {
+        // Grades 1-6 are the primary-school set; the secondary grade is over a
+        // thousand characters and is cut into four frequency bands.
         val sizes = DeckCatalog.KANJI.map { deck -> kanji.count { it.deckId == deck.id } }
-        assertEquals(listOf(300, 300, 300, 300, 300, 300, 336), sizes)
+        assertEquals(listOf(80, 160, 200, 200, 185, 181, 283, 283, 283, 281), sizes)
+        assertEquals(2136, sizes.sum())
+    }
+
+    @Test
+    fun exampleWordsCarryAReadingAndAMeaning() {
+        // "＿一" alone is a puzzle; the reading and gloss are what make it a hint.
+        val withWord = kanji.filter { it.exampleWord != null }
+        assertTrue(withWord.isNotEmpty())
+        val missing = withWord.filter { it.exampleReading.isNullOrBlank() || it.exampleMeaning.isNullOrBlank() }
+        assertTrue(missing.isEmpty(), "examples without a reading or meaning: " + missing.take(5).map { it.character })
     }
 
     @Test

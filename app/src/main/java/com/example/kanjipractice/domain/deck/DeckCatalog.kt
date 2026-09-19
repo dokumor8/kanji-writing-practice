@@ -38,20 +38,6 @@ interface ScriptProfile {
     val levelPrefix: String?
 
     /**
-     * How many of the recogniser's candidates count as correct.
-     *
-     * One means only the recogniser's first choice is accepted, which is what
-     * both apps use: a wrong character coming top is a real error worth catching,
-     * and a wider window is what let a character ranked below the model's first
-     * choice pass.
-     *
-     * It stays a per-flavour setting because the two apps run different models
-     * over character sets of very different size and density, so the tolerance
-     * that suits one need not suit the other.
-     */
-    val acceptedRanks: Int
-
-    /**
      * Who to credit for the bundled material. Flavour-specific because the two
      * apps ship entirely different character data under entirely different
      * licences, and crediting KanjiVG in the Chinese app would be both wrong and

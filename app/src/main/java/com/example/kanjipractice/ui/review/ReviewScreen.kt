@@ -121,6 +121,19 @@ private fun PromptContent(state: ReviewUiState.Prompt, viewModel: ReviewViewMode
         // it matches the square the stroke diagram is drawn in.
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
             val side = minOf(maxWidth, maxHeight)
+            // Deliberate practice: the reference is shown here, unlike the prompt
+            // proper, because this is copying rather than recall.
+            if (state.guideVisible) {
+                StrokeOrderView(
+                    diagram = state.diagram,
+                    character = state.card.character,
+                    modifier = Modifier.size(side).align(Alignment.Center),
+                    animate = true,
+                    showNumbers = true,
+                    strokeColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.30f),
+                    showGuideBox = false,
+                )
+            }
             DrawingCanvas(
                 strokes = state.strokes,
                 onStrokeFinished = viewModel::onStrokeFinished,
@@ -209,7 +222,28 @@ private fun PromptPanel(card: CardEntity) {
             )
             card.readings().forEach { (label, value) -> LabeledValue(label, value) }
             card.exampleWord?.let { word ->
-                LabeledValue("Example", blanked(word, card.character))
+                // Labelled in full, and with its reading and meaning: "＿一" on its
+                // own is a puzzle, not a hint.
+                Column(Modifier.padding(top = 10.dp)) {
+                    Text(
+                        text = "Example word",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = blanked(word, card.character),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    val detail = listOfNotNull(card.exampleReading, card.exampleMeaning)
+                        .joinToString("  -  ")
+                    if (detail.isNotEmpty()) {
+                        Text(
+                            text = detail,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
             }
         }
     }
@@ -355,6 +389,15 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             }
         }
 
+        state.similarityPercent?.let { percent ->
+            Text(
+                text = "Shape " + percent + "%",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+
         Spacer(Modifier.height(12.dp))
 
         Button(
@@ -362,6 +405,10 @@ private fun SuccessContent(state: ReviewUiState.Success, viewModel: ReviewViewMo
             enabled = state.rating != null,
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Next") }
+
+        // The rating screen was a dead end for practice: the only way to draw a
+        // character again was to fail it, which is backwards.
+        TextButton(onClick = viewModel::drawAgain) { Text("Draw it again") }
     }
 }
 

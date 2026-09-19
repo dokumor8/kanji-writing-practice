@@ -96,6 +96,8 @@ class DeckSeeder @Inject constructor(
             reading1 = card.reading1,
             reading2 = card.reading2,
             exampleWord = card.exampleWord,
+            exampleReading = card.exampleReading,
+            exampleMeaning = card.exampleMeaning,
             level = card.level,
             deckId = card.deckId,
             deckSortKey = card.sortKey,
