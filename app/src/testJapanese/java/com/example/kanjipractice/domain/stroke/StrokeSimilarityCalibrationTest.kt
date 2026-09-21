@@ -2,6 +2,7 @@ package com.example.kanjipractice.domain.stroke
 
 import com.example.kanjipractice.domain.model.Stroke
 import com.example.kanjipractice.domain.model.StrokePoint
+import com.example.kanjipractice.domain.settings.StudySettings
 import java.io.File
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -300,6 +301,62 @@ class StrokeSimilarityCalibrationTest {
             stoppedShort.score < clean.score - 0.12,
             "a tail that stops early scored " + stoppedShort.score,
         )
+    }
+
+    /**
+     * The hardest realistic case: a long character, written on a phone.
+     *
+     * 選 has fifteen strokes, so nothing averages away, and a fingertip on glass
+     * is a couple of units imprecise on a character over a hundred units across.
+     * This is the fixture the default threshold answers to: the wobble levels
+     * here are the ones the threshold has to let through.
+     */
+    @Test
+    fun aLongCharacterSurvivesAPhoneSizedWobble() {
+        val sen = diagram("選")
+        val copy = StrokeSimilarity.outline(sen)
+        val clean = StrokeSimilarity.compare(copy, sen)!!
+        // Amount is the full width of the random offset, so 5f is about +-2.5
+        // units: roughly a fingertip.
+        val phone = StrokeSimilarity.compare(jitter(copy, amount = 5f), sen)!!
+        val heavy = StrokeSimilarity.compare(jitter(copy, amount = 9f), sen)!!
+        println("選 clean:          " + describe(clean) + "  (" + clean.referenceStrokes + " strokes)")
+        println("選 phone wobble:   " + describe(phone))
+        println("選 heavy wobble:   " + describe(heavy))
+
+        assertTrue(clean.score > 0.95)
+        assertTrue(
+            phone.score > StudySettings.DEFAULT_SIMILARITY_PERCENT / 100.0 + 0.20,
+            "a phone-sized wobble on 選 scored " + phone.score,
+        )
+        // And it has to be worth something: the score must fall as the drawing
+        // gets worse, or the term is not measuring anything.
+        assertTrue(heavy.score < phone.score, "a heavier wobble should score lower")
+    }
+
+    /**
+     * A character of one stroke has only its shape to get right.
+     *
+     * With no other strokes there is no layout to be wrong about, and the frame is
+     * fitted to that one stroke, so length and position both read 1.00 for
+     * anything at all -- a vertical line, a dot, a scribble. Scoring them let a
+     * horizontal line pass for a diagonal one at 68%. So for a single stroke,
+     * shape is the whole score.
+     */
+    @Test
+    fun aSingleStrokeCharacterIsJudgedOnShapeAlone() {
+        val one = diagram("一")
+        val copy = StrokeSimilarity.outline(one)
+        val clean = StrokeSimilarity.compare(copy, one)!!
+        val turned = StrokeSimilarity.compare(
+            copy.map { s -> Stroke(s.points.map { StrokePoint(it.y, it.x) }) },
+            one,
+        )!!
+        println("一 clean:           " + describe(clean))
+        println("一 drawn vertical:  " + describe(turned))
+
+        assertTrue(clean.score > 0.95, "a clean 一 scored " + clean.score)
+        assertTrue(turned.score < 0.50, "a vertical line for 一 scored " + turned.score)
     }
 
     /** Drawing a straight line where the reference is bent is a shape error. */

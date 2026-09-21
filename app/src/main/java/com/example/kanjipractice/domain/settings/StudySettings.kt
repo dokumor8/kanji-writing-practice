@@ -3,12 +3,17 @@ package com.example.kanjipractice.domain.settings
 /**
  * How a drawing is judged, and how many new cards a day.
  *
- * The defaults for the two judgement settings are calibration results, not
- * taste: see StrokeSimilarityCalibrationTest, which measures a real reference
- * diagram against copies of itself. Correct copies score 1.00, and every way of
- * getting it wrong that was measured -- a missing stroke, a displaced stroke,
- * half a character, the right strokes in the wrong order -- scored 0.57 or less.
- * 70% sits in that gap with room on both sides.
+ * The defaults for the two judgement settings come from
+ * StrokeSimilarityCalibrationTest, which measures real reference diagrams against
+ * perturbed copies of themselves.
+ *
+ * The shape threshold is deliberately **lenient**. Writing a fifteen-stroke
+ * character with a fingertip on glass is imprecise, and a correct attempt that
+ * wobbles scores around 0.86 to 0.91; a heavy-handed one still scores about 0.80.
+ * Getting the character *wrong* -- the strokes in the wrong order, one missing, a
+ * different character entirely -- scores 0.35 or below. So the threshold is not
+ * grading penmanship, it is answering "is this the character you were asked for",
+ * and anything in that wide gap will do.
  */
 data class StudySettings(
     /** How many previously unseen cards may be introduced per day. */
@@ -50,7 +55,7 @@ data class StudySettings(
         const val MIN_ACCEPTED_CANDIDATES = 1
         const val MAX_ACCEPTED_CANDIDATES = 10
 
-        const val DEFAULT_SIMILARITY_PERCENT = 70
+        const val DEFAULT_SIMILARITY_PERCENT = 50
         const val MIN_SIMILARITY_PERCENT = 0
         const val MAX_SIMILARITY_PERCENT = 100
         const val SIMILARITY_STEP = 5

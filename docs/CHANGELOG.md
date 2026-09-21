@@ -4,6 +4,23 @@ A record of what each round of hands-on testing turned up. These are kept becaus
 most of the entries are bugs that were invisible in review and obvious in use, and
 the reasoning is usually more useful than the fix.
 
+## What changed in 2.4.1
+
+**A crossing no longer has to be a crossing.** The topology term asked for a
+strict through-crossing, which is not something a fingertip on a phone can
+guarantee. It flipped on and off between attempts, so 選 scored *worse* with less
+wobble — 0.82 with a light wobble against 0.86 with a heavier one. A pair of
+strokes now counts as still crossing if they cross **or** come within a hair of
+each other. 選 with a light wobble went from 0.82 to 0.91, and 羊 with a tail that
+stops well short still scores 0.72.
+
+**The default shape threshold went from 70% to 50%.** It was rejecting correct
+drawings: 選 took more than thirty attempts at 60%. Correct drawings land at 0.86
+or above even on a fifteen-stroke character with a phone-sized wobble, and a
+genuinely wrong one — wrong order, a missing stroke, a different character — lands
+at 0.41 or below. The threshold exists to catch the second group, not to grade
+penmanship, so it now sits well inside the gap.
+
 ## What changed in 2.4
 
 **The drawing check was rebuilt, because it was failing correct drawings.**

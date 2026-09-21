@@ -137,6 +137,16 @@ scale is chosen by search: a range is tried and whichever makes the drawing look
 most like the reference is kept. One wrong stroke can then only make the frame
 worse for itself.
 
+The crossing test is deliberately loose about *how* a stroke crosses. Asking for
+a strict through-crossing was wrong on a phone: a stroke told to run through
+another often stops a hair short, because a fingertip cannot guarantee a
+through-crossing every time. With the strict test that flipped on and off between
+attempts — 選 measured *worse* with less wobble, 0.82 with a light wobble against
+0.86 with a heavier one. A pair now counts as preserved if the strokes cross **or**
+come within a hair of each other, so what fails is a real gap: the tail that stops
+well short. 選 with a light wobble went from 0.82 to 0.91, and 羊 with a short tail
+still scores 0.72.
+
 Two other things stop the measurement inventing errors. The drawing is
 **smoothed before it is resampled** — a raw finger trace zigzags, a zigzag is
 longer than the line it was meant to be, and resampling by arc length spreads its
@@ -153,11 +163,13 @@ below is that test's output.
 | Drawing | Score |
 | --- | --- |
 | exact copy | 1.00 |
-| a correct 場 with a small wobble | 0.88 |
 | 取 with 又 moved low | 0.93 |
 | 二 with the bottom bar 31% short | 0.89 |
-| 羊's tail stopping before the bar it should cross | 0.83 |
+| 場 (12 strokes) with a small wobble | 0.88 |
+| 選 (15 strokes) with a phone-sized wobble | 0.86 |
+| 選 with a heavy wobble | 0.80 |
 | a stroke displaced across the character | 0.76 |
+| 羊's tail stopping well short of the bar it crosses | 0.72 |
 | a different character (月 for 日) | 0.64 |
 | drawing a bent stroke straight (こ) | 0.53 |
 | one stroke missing from 曜 (18 strokes) | 0.41 |
@@ -165,9 +177,13 @@ below is that test's output.
 | 目 drawn as 日 | 0.31 |
 | one stroke missing from 日 (4 strokes) | 0.11 |
 
-Correct drawings land at 0.88 or above even with a wobble, and every measured way
-of getting one wrong lands at 0.76 or below, so 70% sits in the gap. Both this and
-the candidate count are adjustable in settings; at 0% the shape check is off.
+A correct drawing lands at 0.86 or above even on the longest character with a
+fingertip wobble, and every measured way of getting one *wrong* lands at 0.41 or
+below. The default of **50%** sits deliberately at the lenient end of that gap.
+The check is not grading penmanship — it answers "is this the character you were
+asked for" — and a fingertip on glass cannot be precise enough for anything
+tighter. Both this and the candidate count are adjustable in settings; at 0% the
+shape check is off.
 
 Two limits are worth stating. KanjiVG carries no stroke width, so this cannot tell
 a confident stroke from a tentative one. And it says nothing about where on the

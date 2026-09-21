@@ -103,6 +103,22 @@ object StrokeSimilarity {
     private const val POSITION_WEIGHT = 0.35
 
     /**
+     * How much each term counts, which is not the same for every character.
+     *
+     * For a character of one stroke there is no layout to get right: there are no
+     * other strokes to be in the wrong place relative to, and the frame is fitted
+     * to that stroke alone, so length and position both read 1.00 *whatever* was
+     * drawn. Scoring them would only dilute the one term that carries any
+     * information -- which let a horizontal line pass for a diagonal one. So for
+     * a single stroke, shape is everything.
+     */
+    private data class Weights(val shape: Double, val length: Double, val position: Double)
+
+    private fun weightsFor(reference: List<List<Vec2>>): Weights =
+        if (reference.size < 2) Weights(1.0, 0.0, 0.0)
+        else Weights(SHAPE_WEIGHT, LENGTH_WEIGHT, POSITION_WEIGHT)
+
+    /**
      * How much a broken crossing pattern can cost.
      *
      * Only a correction, never the verdict. Crossings are derived geometry, and
@@ -209,7 +225,8 @@ object StrokeSimilarity {
         val dotLength = extent * DOT_FRACTION
         val radiusFloor = extent * RADIUS_FLOOR_FRACTION
 
-        val placed = bestFrame(ink, ref, extent, dotLength, radiusFloor)
+        val weights = weightsFor(ref)
+        val placed = bestFrame(ink, ref, extent, dotLength, radiusFloor, weights)
 
         val total = max(ref.size, placed.size)
         val shape = DoubleArray(total)
@@ -226,9 +243,9 @@ object StrokeSimilarity {
             shape[i] = shapeScore(placed[i], ref[i], radiusFloor)
             length[i] = lengthScore(placed[i], ref[i], dotLength)
             position[i] = positionScore(placed[i], ref[i], extent)
-            combined[i] = SHAPE_WEIGHT * shape[i] +
-                LENGTH_WEIGHT * length[i] +
-                POSITION_WEIGHT * position[i]
+            combined[i] = weights.shape * shape[i] +
+                weights.length * length[i] +
+                weights.position * position[i]
         }
 
         val mean = combined.average()
@@ -300,17 +317,61 @@ object StrokeSimilarity {
     /**
      * Whether the crossings the reference has are still there.
      *
-     * Only the reference's crossings are required. An invented crossing is not
-     * penalised: on a character whose strokes meet end-to-end, a little wobble
-     * turns a touch into a crossing, and charging for that made correct drawings
-     * fail. What this is for is the other direction -- the tail of 羊 stopping at
-     * the bar it should run through.
+     * Only the reference's crossings are required: an invented one is not
+     * penalised, because on a character whose strokes meet end-to-end a little
+     * wobble turns a touch into a crossing and charging for that failed correct
+     * drawings.
+     *
+     * The test for "still there" is deliberately loose about *how*. Asking for a
+     * strict crossing was wrong on a phone: a stroke told to run through another
+     * often stops a hair short, because there is not enough precision in a
+     * fingertip to guarantee a through-crossing every time. That is not the
+     * mistake this term is for, and with the strict test it flipped on and off
+     * between attempts -- 選 measured *worse* with less wobble. A pair now counts
+     * as preserved if the strokes cross **or** come within a hair of each other,
+     * so what fails is a real gap: the tail that stops well short.
      */
     private fun topologyScore(drawn: List<List<Vec2>>, reference: List<List<Vec2>>): Double {
         val required = crossingPairs(reference)
         if (required.isEmpty()) return 1.0
-        val present = crossingPairs(drawn)
-        return required.count { present.contains(it) }.toDouble() / required.size
+        val slack = extent(reference) * CROSSING_SLACK_FRACTION
+        var kept = 0
+        for (key in required) {
+            val i = (key / KEY_STRIDE).toInt()
+            val j = (key % KEY_STRIDE).toInt()
+            if (i < drawn.size && j < drawn.size && strokesMeet(drawn[i], drawn[j], slack)) kept++
+        }
+        return kept.toDouble() / required.size
+    }
+
+    /** True when two strokes cross, or pass within [slack] of each other. */
+    private fun strokesMeet(a: List<Vec2>, b: List<Vec2>, slack: Double): Boolean {
+        for (k in 0 until a.size - 1) {
+            for (l in 0 until b.size - 1) {
+                if (segmentDistance(a[k], a[k + 1], b[l], b[l + 1]) <= slack) return true
+            }
+        }
+        return false
+    }
+
+    /** Shortest distance between two segments; zero when they cross. */
+    private fun segmentDistance(p1: Vec2, p2: Vec2, p3: Vec2, p4: Vec2): Double {
+        if (segmentsCross(p1, p2, p3, p4)) return 0.0
+        return minOf(
+            pointToSegment(p1, p3, p4),
+            pointToSegment(p2, p3, p4),
+            pointToSegment(p3, p1, p2),
+            pointToSegment(p4, p1, p2),
+        )
+    }
+
+    private fun pointToSegment(p: Vec2, a: Vec2, b: Vec2): Double {
+        val dx = (b.x - a.x).toDouble()
+        val dy = (b.y - a.y).toDouble()
+        val lengthSquared = dx * dx + dy * dy
+        if (lengthSquared < EPSILON) return distance(p, a)
+        val t = (((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared).coerceIn(0.0, 1.0)
+        return hypot((p.x - a.x) - t * dx, (p.y - a.y) - t * dy)
     }
 
     private fun weakestTerm(
@@ -349,6 +410,7 @@ object StrokeSimilarity {
         extent: Double,
         dotLength: Double,
         radiusFloor: Double,
+        weights: Weights,
     ): List<List<Vec2>> {
         val dMean = mean(centroidList(drawn))
         val rMean = mean(centroidList(reference))
@@ -360,7 +422,7 @@ object StrokeSimilarity {
             val factor = SCALE_SEARCH_MIN +
                 (SCALE_SEARCH_MAX - SCALE_SEARCH_MIN) * step / SCALE_SEARCH_STEPS
             val candidate = place(drawn, dMean, rMean, guess * factor)
-            val score = meanStrokeScore(candidate, reference, extent, dotLength, radiusFloor)
+            val score = meanStrokeScore(candidate, reference, extent, dotLength, radiusFloor, weights)
             if (score > bestScore) {
                 bestScore = score
                 best = candidate
@@ -414,15 +476,16 @@ object StrokeSimilarity {
         extent: Double,
         dotLength: Double,
         radiusFloor: Double,
+        weights: Weights,
     ): Double {
         val total = max(reference.size, drawn.size)
         if (total == 0) return 1.0
         var sum = 0.0
         for (i in 0 until total) {
             if (i >= reference.size || i >= drawn.size) continue
-            sum += SHAPE_WEIGHT * shapeScore(drawn[i], reference[i], radiusFloor) +
-                LENGTH_WEIGHT * lengthScore(drawn[i], reference[i], dotLength) +
-                POSITION_WEIGHT * positionScore(drawn[i], reference[i], extent)
+            sum += weights.shape * shapeScore(drawn[i], reference[i], radiusFloor) +
+                weights.length * lengthScore(drawn[i], reference[i], dotLength) +
+                weights.position * positionScore(drawn[i], reference[i], extent)
         }
         return sum / total
     }
@@ -477,6 +540,12 @@ object StrokeSimilarity {
     private fun extentOf(strokes: List<List<Vec2>>): Double = extent(strokes)
 
     // ---- crossings ----------------------------------------------------------
+
+    /** Packing stride for crossing keys. No character has a thousand strokes. */
+    private const val KEY_STRIDE = 1000L
+
+    /** How near is near enough to count as a crossing that was kept. */
+    private const val CROSSING_SLACK_FRACTION = 0.04
 
     /** Pairs of strokes that properly cross, as packed i*n+j keys. */
     private fun crossingPairs(strokes: List<List<Vec2>>): List<Long> {
