@@ -19,3 +19,6 @@
 # Build output
 app/build/
 fsrs/build/
+
+# Python scratch tools
+__pycache__/
